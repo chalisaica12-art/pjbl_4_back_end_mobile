@@ -37,7 +37,7 @@ class RegisterStep1View extends StatelessWidget {
                 ),
               ),
               Text(
-                'Fill in your personal info',
+                'Personal Info',
                 style: TextStyle(
                   fontSize: screenWidth * 0.04,
                   color: Colors.black,
@@ -46,7 +46,7 @@ class RegisterStep1View extends StatelessWidget {
               SizedBox(height: screenHeight * 0.05),
 
               // Full Name
-              Text('Full Name',
+              Text('Name',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: screenWidth * 0.035)),
@@ -54,7 +54,7 @@ class RegisterStep1View extends StatelessWidget {
               TextField(
                 controller: controller.nameController,
                 decoration: InputDecoration(
-                  hintText: 'Enter your full name',
+                  hintText: 'Enter your name',
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10)),
                   contentPadding: EdgeInsets.symmetric(
@@ -72,7 +72,7 @@ class RegisterStep1View extends StatelessWidget {
               TextField(
                 controller: controller.usernameController,
                 decoration: InputDecoration(
-                  hintText: 'Enter username (e.g. @questoria)',
+                  hintText: 'Enter username',
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10)),
                   contentPadding: EdgeInsets.symmetric(

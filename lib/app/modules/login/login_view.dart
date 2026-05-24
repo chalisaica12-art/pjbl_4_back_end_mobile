@@ -45,21 +45,12 @@ class LoginView extends StatelessWidget {
                     SizedBox(height: screenHeight * 0.04),
 
                     // Email
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Email Address',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: screenWidth * 0.035,
-                          ),
-                        ),
-                        Text(
-                          'Phone Number?',
-                          style: TextStyle(fontSize: screenWidth * 0.03),
-                        ),
-                      ],
+                    Text(
+                      'Email Address',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: screenWidth * 0.035,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
@@ -187,21 +178,21 @@ class LoginView extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         GestureDetector(
-                          onTap: () {}, // nanti diisi Google login
+                          onTap: () {},
                           child: Image.asset('assets/gambar/icongoogle.png',
                               width: screenWidth * 0.08,
                               height: screenWidth * 0.08),
                         ),
                         SizedBox(width: screenWidth * 0.07),
                         GestureDetector(
-                          onTap: () {}, // nanti diisi Facebook login
+                          onTap: () {},
                           child: Image.asset('assets/gambar/iconfacebook.png',
                               width: screenWidth * 0.08,
                               height: screenWidth * 0.08),
                         ),
                         SizedBox(width: screenWidth * 0.07),
                         GestureDetector(
-                          onTap: () {}, // nanti diisi Apple login
+                          onTap: () {},
                           child: Image.asset('assets/gambar/iconapple.png',
                               width: screenWidth * 0.08,
                               height: screenWidth * 0.08),

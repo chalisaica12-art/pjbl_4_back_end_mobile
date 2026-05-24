@@ -27,7 +27,6 @@ class RegisterStep2View extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Tombol Back
                     GestureDetector(
                       onTap: () => Get.back(),
                       child: const Icon(Icons.arrow_back, color: Colors.black),
@@ -50,17 +49,10 @@ class RegisterStep2View extends StatelessWidget {
                     SizedBox(height: screenHeight * 0.04),
 
                     // Email
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Email Address',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: screenWidth * 0.035)),
-                        Text('Phone Number?',
-                            style: TextStyle(fontSize: screenWidth * 0.03)),
-                      ],
-                    ),
+                    Text('Email Address',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: screenWidth * 0.035)),
                     const SizedBox(height: 8),
                     TextField(
                       controller: controller.emailController,
