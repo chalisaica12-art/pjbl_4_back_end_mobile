@@ -96,7 +96,7 @@ class RegisterController extends GetxController {
 
         _showSnackbar('Register Successful! ✓', Colors.green);
         await Future.delayed(const Duration(milliseconds: 1500));
-        Get.offAllNamed('/login');
+        Get.offAllNamed('/home');
       }
     } on AuthException catch (e) {
       _showSnackbar(e.message, const Color(0xff73090D));
