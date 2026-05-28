@@ -4,6 +4,7 @@ import 'forgot_password_controller.dart';
 class ForgotPasswordBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<ForgotPasswordController>(() => ForgotPasswordController());
+    // Controller akan dibuat di view, bukan di binding
+    // Ini untuk menghindari duplicate controller
   }
 }

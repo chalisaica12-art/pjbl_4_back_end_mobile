@@ -39,7 +39,8 @@ class SplashController extends GetxController
     animationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         Future.delayed(const Duration(milliseconds: 500), () {
-          Get.offAllNamed(Routes.HOME);
+          // LANGSUNG KE HALAMAN LOGIN
+          Get.offAllNamed(Routes.LOGIN);
         });
       }
     });

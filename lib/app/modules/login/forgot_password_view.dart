@@ -7,7 +7,12 @@ class ForgotPasswordView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cek apakah controller sudah ada, jika belum buat baru
+    if (!Get.isRegistered<ForgotPasswordController>()) {
+      Get.put(ForgotPasswordController());
+    }
     final controller = Get.find<ForgotPasswordController>();
+    
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -23,21 +28,27 @@ class ForgotPasswordView extends StatelessWidget {
 
               // Tombol back
               GestureDetector(
-                onTap: () => Get.back(),
+                onTap: () {
+                  // Hapus controller sebelum kembali
+                  if (Get.isRegistered<ForgotPasswordController>()) {
+                    Get.delete<ForgotPasswordController>();
+                  }
+                  Get.back();
+                },
                 child: const Icon(Icons.arrow_back, color: Colors.black),
               ),
 
               SizedBox(height: screenHeight * 0.05),
 
               Text(
-                'Forgot Password',
+                'Lupa Kata Sandi',
                 style: TextStyle(
                   fontSize: screenWidth * 0.07,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
-                'Enter your email to reset password',
+                'Masukkan email Anda untuk mereset kata sandi',
                 style: TextStyle(
                   fontSize: screenWidth * 0.04,
                   color: Colors.black,
@@ -47,7 +58,7 @@ class ForgotPasswordView extends StatelessWidget {
               SizedBox(height: screenHeight * 0.05),
 
               Text(
-                'Email Address',
+                'Alamat Email',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: screenWidth * 0.035,
@@ -58,7 +69,7 @@ class ForgotPasswordView extends StatelessWidget {
                 controller: controller.emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  hintText: 'Enter your email address',
+                  hintText: 'Masukkan alamat email Anda',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -71,7 +82,7 @@ class ForgotPasswordView extends StatelessWidget {
 
               SizedBox(height: screenHeight * 0.04),
 
-              // Tombol Send
+              // Tombol Kirim
               Obx(() => GestureDetector(
                 onTap: controller.isLoading.value ? null : controller.sendResetEmail,
                 child: Container(
@@ -85,7 +96,7 @@ class ForgotPasswordView extends StatelessWidget {
                     child: controller.isLoading.value
                         ? const CircularProgressIndicator(color: Colors.white)
                         : Text(
-                            'Reset Password',
+                            'Reset Kata Sandi',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: screenWidth * 0.045,
@@ -99,16 +110,22 @@ class ForgotPasswordView extends StatelessWidget {
               SizedBox(height: screenHeight * 0.025),
 
               GestureDetector(
-                onTap: () => Get.back(),
+                onTap: () {
+                  // Hapus controller sebelum kembali
+                  if (Get.isRegistered<ForgotPasswordController>()) {
+                    Get.delete<ForgotPasswordController>();
+                  }
+                  Get.back();
+                },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Remember your password? ',
+                      'Ingat kata sandi Anda? ',
                       style: TextStyle(fontSize: screenWidth * 0.035),
                     ),
                     Text(
-                      'Login',
+                      'Masuk',
                       style: TextStyle(
                         color: const Color(0xff73090D),
                         fontWeight: FontWeight.bold,

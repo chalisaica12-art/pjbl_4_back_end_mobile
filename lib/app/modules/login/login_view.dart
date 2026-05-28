@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'login_controller.dart';
+import 'forgot_password_view.dart';
+import 'forgot_password_controller.dart';
 
 class LoginView extends StatelessWidget {
-  const LoginView({Key? key}) : super(key: key);
+  const LoginView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +31,14 @@ class LoginView extends StatelessWidget {
                   children: [
                     SizedBox(height: screenHeight * 0.06),
                     Text(
-                      'Login Account',
+                      'Masuk ke Akun',
                       style: TextStyle(
                         fontSize: screenWidth * 0.07,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      'Welcome Back!',
+                      'Selamat Datang Kembali!',
                       style: TextStyle(
                         fontSize: screenWidth * 0.04,
                         color: Colors.black,
@@ -46,7 +48,7 @@ class LoginView extends StatelessWidget {
 
                     // Email
                     Text(
-                      'Email Address',
+                      'Alamat Email',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: screenWidth * 0.035,
@@ -57,7 +59,7 @@ class LoginView extends StatelessWidget {
                       controller: controller.emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
-                        hintText: 'Enter email address',
+                        hintText: 'Masukkan alamat email',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -71,7 +73,7 @@ class LoginView extends StatelessWidget {
 
                     // Password
                     Text(
-                      'Password',
+                      'Kata Sandi',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: screenWidth * 0.035,
@@ -82,7 +84,7 @@ class LoginView extends StatelessWidget {
                       controller: controller.passwordController,
                       obscureText: controller.isPasswordObscured.value,
                       decoration: InputDecoration(
-                        hintText: 'Enter password',
+                        hintText: 'Masukkan kata sandi',
                         suffixIcon: IconButton(
                           icon: Icon(
                             controller.isPasswordObscured.value
@@ -101,14 +103,20 @@ class LoginView extends StatelessWidget {
                       ),
                     )),
 
-                    // Forgot Password
+                    // Lupa Password
                     const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerRight,
                       child: GestureDetector(
-                        onTap: () => Get.toNamed('/forgot-password'),
+                        onTap: () {
+                          // Hapus controller lama jika ada
+                          if (Get.isRegistered<ForgotPasswordController>()) {
+                            Get.delete<ForgotPasswordController>();
+                          }
+                          Get.to(() => const ForgotPasswordView());
+                        },
                         child: Text(
-                          'Forgot Password?',
+                          'Lupa Kata Sandi?',
                           style: TextStyle(
                             fontSize: screenWidth * 0.03,
                             fontWeight: FontWeight.bold,
@@ -129,7 +137,7 @@ class LoginView extends StatelessWidget {
                           onChanged: controller.toggleAgreed,
                         ),
                         Text(
-                          'I agree with privacy policy',
+                          'Saya menyetujui kebijakan privasi',
                           style: TextStyle(fontSize: screenWidth * 0.035),
                         ),
                       ],
@@ -150,7 +158,7 @@ class LoginView extends StatelessWidget {
                           child: controller.isLoading.value
                               ? const CircularProgressIndicator(color: Colors.white)
                               : Text(
-                                  'Login',
+                                  'Masuk',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: screenWidth * 0.045,
@@ -164,7 +172,7 @@ class LoginView extends StatelessWidget {
 
                     Center(
                       child: Text(
-                        '---- Or continue with ----',
+                        '---- Atau masuk dengan ----',
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: screenWidth * 0.035,
@@ -207,11 +215,11 @@ class LoginView extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Don\'t have an account? ',
+                            'Belum punya akun? ',
                             style: TextStyle(fontSize: screenWidth * 0.035),
                           ),
                           Text(
-                            'Sign Up',
+                            'Daftar',
                             style: TextStyle(
                               color: const Color(0xff73090D),
                               fontWeight: FontWeight.bold,

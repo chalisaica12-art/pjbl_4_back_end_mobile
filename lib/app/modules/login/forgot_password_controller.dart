@@ -7,6 +7,12 @@ class ForgotPasswordController extends GetxController {
   final isLoading = false.obs;
   final supabase = Supabase.instance.client;
 
+  @override
+  void onClose() {
+    emailController.dispose();
+    super.onClose();
+  }
+
   void _showSnackbar(String message, Color color) {
     final context = Get.context;
     if (context == null) return;
@@ -27,7 +33,12 @@ class ForgotPasswordController extends GetxController {
 
   Future<void> sendResetEmail() async {
     if (emailController.text.isEmpty) {
-      _showSnackbar('Please enter your email', const Color(0xff73090D));
+      _showSnackbar('Masukkan alamat email Anda', const Color(0xff73090D));
+      return;
+    }
+
+    if (!GetUtils.isEmail(emailController.text.trim())) {
+      _showSnackbar('Masukkan alamat email yang valid', const Color(0xff73090D));
       return;
     }
 
@@ -36,19 +47,18 @@ class ForgotPasswordController extends GetxController {
       await supabase.auth.resetPasswordForEmail(
         emailController.text.trim(),
       );
-      _showSnackbar('Reset link sent! Check your email ✓', Colors.green);
+      _showSnackbar('Tautan reset terkirim! Cek email Anda ✓', Colors.green);
       await Future.delayed(const Duration(seconds: 2));
+      
+      // Hapus controller sebelum kembali
+      Get.delete<ForgotPasswordController>();
       Get.back();
     } on AuthException catch (e) {
       _showSnackbar(e.message, const Color(0xff73090D));
+    } catch (e) {
+      _showSnackbar('Terjadi kesalahan', const Color(0xff73090D));
     } finally {
       isLoading.value = false;
     }
-  }
-
-  @override
-  void onClose() {
-    emailController.dispose();
-    super.onClose();
   }
 }

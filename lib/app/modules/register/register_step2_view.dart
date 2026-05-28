@@ -33,14 +33,14 @@ class RegisterStep2View extends StatelessWidget {
                     ),
                     SizedBox(height: screenHeight * 0.03),
                     Text(
-                      'Create Account',
+                      'Buat Akun',
                       style: TextStyle(
                         fontSize: screenWidth * 0.07,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      'Continue registration',
+                      'Lanjutkan Pendaftaran',
                       style: TextStyle(
                         fontSize: screenWidth * 0.04,
                         color: Colors.black,
@@ -49,7 +49,7 @@ class RegisterStep2View extends StatelessWidget {
                     SizedBox(height: screenHeight * 0.04),
 
                     // Email
-                    Text('Email Address',
+                    Text('Alamat Email',
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: screenWidth * 0.035)),
@@ -58,7 +58,7 @@ class RegisterStep2View extends StatelessWidget {
                       controller: controller.emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
-                        hintText: 'Enter email address',
+                        hintText: 'Masukkan alamat email',
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10)),
                         contentPadding: EdgeInsets.symmetric(
@@ -68,7 +68,7 @@ class RegisterStep2View extends StatelessWidget {
                     SizedBox(height: screenHeight * 0.02),
 
                     // Password
-                    Text('Password',
+                    Text('Kata Sandi',
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: screenWidth * 0.035)),
@@ -77,7 +77,7 @@ class RegisterStep2View extends StatelessWidget {
                       controller: controller.passwordController,
                       obscureText: controller.isPasswordObscured.value,
                       decoration: InputDecoration(
-                        hintText: 'Create password',
+                        hintText: 'Buat kata sandi',
                         suffixIcon: IconButton(
                           icon: Icon(controller.isPasswordObscured.value
                               ? Icons.visibility_off_outlined
@@ -93,7 +93,7 @@ class RegisterStep2View extends StatelessWidget {
                     SizedBox(height: screenHeight * 0.02),
 
                     // Confirm Password
-                    Text('Confirm Password',
+                    Text('Konfirmasi Kata Sandi',
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: screenWidth * 0.035)),
@@ -102,7 +102,7 @@ class RegisterStep2View extends StatelessWidget {
                       controller: controller.confirmPasswordController,
                       obscureText: controller.isConfirmPasswordObscured.value,
                       decoration: InputDecoration(
-                        hintText: 'Re-enter password',
+                        hintText: 'Masukkan ulang kata sandi',
                         suffixIcon: IconButton(
                           icon: Icon(controller.isConfirmPasswordObscured.value
                               ? Icons.visibility_off_outlined
@@ -125,13 +125,13 @@ class RegisterStep2View extends StatelessWidget {
                           activeColor: const Color(0xff73090D),
                           onChanged: controller.toggleAgreed,
                         ),
-                        Text('I agree with privacy policy',
+                        Text('Saya menyetujui kebijakan privasi',
                             style: TextStyle(fontSize: screenWidth * 0.035)),
                       ],
                     )),
                     SizedBox(height: screenHeight * 0.035),
 
-                    // Tombol Sign Up
+                    // Tombol Daftar
                     Obx(() => GestureDetector(
                       onTap: controller.isLoading.value
                           ? null
@@ -148,7 +148,7 @@ class RegisterStep2View extends StatelessWidget {
                               ? const CircularProgressIndicator(
                                   color: Colors.white)
                               : Text(
-                                  'Sign Up',
+                                  'Daftar',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: screenWidth * 0.045,
@@ -162,7 +162,7 @@ class RegisterStep2View extends StatelessWidget {
 
                     Center(
                       child: Text(
-                        '---- Or continue with ----',
+                        '---- Atau daftar dengan ----',
                         style: TextStyle(
                             color: Colors.black,
                             fontSize: screenWidth * 0.035),
@@ -199,14 +199,17 @@ class RegisterStep2View extends StatelessWidget {
                     SizedBox(height: screenHeight * 0.04),
 
                     GestureDetector(
-                      onTap: () => Get.offAllNamed('/login'),
+                      onTap: () {
+                    Get.delete<RegisterController>(force: true);
+                    Get.offAllNamed('/login');
+                    },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text('Already have an account? ',
+                          Text('Sudah punya akun? ',
                               style: TextStyle(fontSize: screenWidth * 0.035)),
                           Text(
-                            'Login',
+                            'Masuk',
                             style: TextStyle(
                               color: const Color(0xff73090D),
                               fontWeight: FontWeight.bold,

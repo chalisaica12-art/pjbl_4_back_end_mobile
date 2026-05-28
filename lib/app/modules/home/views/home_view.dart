@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/home_controller.dart';
+import '../../../widgets/custom_bottom_navbar.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({Key? key}) : super(key: key);
@@ -28,11 +29,11 @@ class HomeView extends StatelessWidget {
           text: TextSpan(
             children: [
               const TextSpan(
-                text: "Welcome\n",
+                text: "Selamat Datang\n",
                 style: TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w700),
               ),
               TextSpan(
-                text: "Hello, ${controller.userName.value}!",
+                text: "Halo, ${controller.userName.value}!",
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
               ),
             ],
@@ -46,16 +47,16 @@ class HomeView extends StatelessWidget {
                 context: context,
                 builder: (context) => AlertDialog(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  title: const Text("Notification"),
-                  content: const Text("Do you want to enable notifications?"),
+                  title: const Text("Notifikasi"),
+                  content: const Text("Apakah Anda ingin mengaktifkan notifikasi?"),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text("No", style: TextStyle(color: Colors.black)),
+                      child: const Text("Tidak", style: TextStyle(color: Colors.black)),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text("Yes", style: TextStyle(color: Color(0xff73090D))),
+                      child: const Text("Ya", style: TextStyle(color: Color(0xff73090D))),
                     ),
                   ],
                 ),
@@ -74,9 +75,9 @@ class HomeView extends StatelessWidget {
             }
             return _homeContent(controller);
           }),
-          Align(
+          const Align(
             alignment: Alignment.bottomCenter,
-            child: Obx(() => _customBottomNavbar(controller)),
+            child: CustomBottomNavbar(currentIndex: 0), // 0 = Home
           ),
         ],
       ),
@@ -151,7 +152,7 @@ class HomeView extends StatelessWidget {
             "Selesaikan setiap era untuk membuka era berikutnya!",
             style: TextStyle(
               fontSize: 13, 
-              color: Colors.grey,
+              color: Color.fromARGB(255, 0, 0, 0),
             ),
           ),
           const SizedBox(height: 20),
@@ -180,7 +181,7 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // Card tanpa jempol, dengan tulisan "5 Pertanyaan"
+  // Card dengan tulisan "5 Pertanyaan"
   Widget _journeyCard({
     required HomeController controller,
     required Map<String, dynamic> item,
@@ -188,6 +189,21 @@ class HomeView extends StatelessWidget {
     required bool isLocked,
     required int index,
   }) {
+    // Fungsi untuk mendapatkan judul era berdasarkan order_number
+    String getEraTitle(int orderNumber) {
+      switch (orderNumber) {
+        case 1: return 'Era Prakasa';
+        case 2: return 'Era Kerajaan Hindu Budha';
+        case 3: return 'Era Kerajaan Islam';
+        case 4: return 'Era Kolonialisme/Penjajahan';
+        case 5: return 'Era Kemerdekaan';
+        case 6: return 'Era Orde Lama';
+        case 7: return 'Era Orde Baru';
+        case 8: return 'Reformasi';
+        default: return item['title'] ?? 'Quiz Title';
+      }
+    }
+
     return GestureDetector(
       onTap: () => controller.onQuizTap(item),
       child: Container(
@@ -297,7 +313,7 @@ class HomeView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item['title'] ?? 'Quiz Title',
+                    getEraTitle(item['order_number']), // <-- JUDUL SUDAH DIGANTI
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -321,72 +337,6 @@ class HomeView extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _customBottomNavbar(HomeController controller) {
-    return Container(
-      height: 65,
-      decoration: const BoxDecoration(
-        color: Color(0xFF73090D),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(
-            icon: Icons.home,
-            label: 'Home',
-            isSelected: controller.selectedIndex.value == 0,
-            onTap: () => controller.changeTab(0),
-          ),
-          _buildNavItem(
-            icon: Icons.leaderboard,
-            label: 'Leaderboard',
-            isSelected: controller.selectedIndex.value == 1,
-            onTap: () => controller.changeTab(1),
-          ),
-          _buildNavItem(
-            icon: Icons.person,
-            label: 'Profile',
-            isSelected: controller.selectedIndex.value == 2,
-            onTap: () => controller.changeTab(2),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? Colors.white70 : Colors.white,
-            size: 28,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isSelected ? Colors.white70 : Colors.white,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
       ),
     );
   }

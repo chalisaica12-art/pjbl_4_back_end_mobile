@@ -43,37 +43,41 @@ class RegisterController extends GetxController {
   }
 
   // Validasi step 1 lalu pindah ke step 2
-  void handleNext() {
-    if (nameController.text.isEmpty ||
-        usernameController.text.isEmpty ||
-        phoneController.text.isEmpty) {
-      _showSnackbar('Please fill in all fields', const Color(0xff73090D));
-      return;
-    }
-    Get.toNamed('/register-step2');
+ void handleNext() {
+  if (nameController.text.isEmpty || phoneController.text.isEmpty) {
+    _showSnackbar('Mohon lengkapi semua kolom', const Color(0xff73090D));
+    return;
   }
+  Get.toNamed('/register-step2');
+}
 
   // Proses register di step 2
   Future<void> handleRegister() async {
     if (!isAgreed.value) {
-      _showSnackbar('Please agree with privacy policy', const Color(0xff73090D));
+      _showSnackbar('Harap setujui kebijakan privasi', const Color(0xff73090D));
       return;
     }
 
     if (emailController.text.isEmpty ||
         passwordController.text.isEmpty ||
         confirmPasswordController.text.isEmpty) {
-      _showSnackbar('Please fill in all fields', const Color(0xff73090D));
+      _showSnackbar('Mohon lengkapi semua kolom', const Color(0xff73090D));
+      return;
+    }
+
+    // Validasi format email
+    if (!GetUtils.isEmail(emailController.text.trim())) {
+      _showSnackbar('Masukkan alamat email yang valid', const Color(0xff73090D));
       return;
     }
 
     if (passwordController.text != confirmPasswordController.text) {
-      _showSnackbar('Password does not match', const Color(0xff73090D));
+      _showSnackbar('Kata sandi tidak cocok', const Color(0xff73090D));
       return;
     }
 
     if (passwordController.text.length < 6) {
-      _showSnackbar('Password minimum 6 characters', const Color(0xff73090D));
+      _showSnackbar('Kata sandi minimal 6 karakter', const Color(0xff73090D));
       return;
     }
 
@@ -94,14 +98,14 @@ class RegisterController extends GetxController {
           'phone': phoneController.text.trim(),
         });
 
-        _showSnackbar('Register Successful! ✓', Colors.green);
+        _showSnackbar('Pendaftaran Berhasil! ✓', Colors.green);
         await Future.delayed(const Duration(milliseconds: 1500));
         Get.offAllNamed('/home');
       }
     } on AuthException catch (e) {
       _showSnackbar(e.message, const Color(0xff73090D));
     } catch (e) {
-      _showSnackbar('Something went wrong', const Color(0xff73090D));
+      _showSnackbar('Terjadi kesalahan', const Color(0xff73090D));
     } finally {
       isLoading.value = false;
     }

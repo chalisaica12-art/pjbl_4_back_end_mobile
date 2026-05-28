@@ -185,7 +185,8 @@ class HomeController extends GetxController {
       );
       return;
     }
-    Get.toNamed('/detail-kuis', arguments: quiz);
+    // PERUBAHAN: dari '/detail-kuis' menjadi '/quiz-detail'
+    Get.toNamed('/quiz-detail', arguments: quiz);
   }
 
   void changeTab(int index) {

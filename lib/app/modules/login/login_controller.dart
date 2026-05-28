@@ -35,12 +35,17 @@ class LoginController extends GetxController {
 
   Future<void> handleLogin() async {
     if (!isAgreed.value) {
-      _showSnackbar('Please agree with privacy policy', const Color(0xff73090D));
+      _showSnackbar('Harap setujui kebijakan privasi', const Color(0xff73090D));
       return;
     }
 
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      _showSnackbar('Please fill in all fields', const Color(0xff73090D));
+      _showSnackbar('Mohon lengkapi semua kolom', const Color(0xff73090D));
+      return;
+    }
+
+    if (!GetUtils.isEmail(emailController.text.trim())) {
+      _showSnackbar('Masukkan alamat email yang valid', const Color(0xff73090D));
       return;
     }
 
@@ -52,22 +57,26 @@ class LoginController extends GetxController {
         password: passwordController.text.trim(),
       );
 
-      _showSnackbar('Login Successful! ✓', Colors.green);
-
+      _showSnackbar('Berhasil Masuk! ✓', Colors.green);
       await Future.delayed(const Duration(milliseconds: 1500));
       Get.offAllNamed('/home');
 
     } on AuthException catch (e) {
-      _showSnackbar(e.message, const Color(0xff73090D));
+      String pesanError = e.message;
+      if (e.message.contains('Invalid login credentials')) {
+        pesanError = 'Email atau kata sandi salah';
+      } else if (e.message.contains('Email not confirmed')) {
+        pesanError = 'Email belum dikonfirmasi';
+      } else if (e.message.contains('User not found')) {
+        pesanError = 'Akun tidak ditemukan';
+      } else if (e.message.contains('too many requests')) {
+        pesanError = 'Terlalu banyak percobaan, coba lagi nanti';
+      } else if (e.message.contains('network')) {
+        pesanError = 'Periksa koneksi internet kamu';
+      }
+      _showSnackbar(pesanError, const Color(0xff73090D));
     } finally {
       isLoading.value = false;
     }
-  }
-
-  @override
-  void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
-    super.onClose();
   }
 }

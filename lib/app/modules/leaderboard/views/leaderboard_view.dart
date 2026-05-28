@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/leaderboard_controller.dart';
+import '../../../widgets/custom_bottom_navbar.dart';
 
 class LeaderboardView extends StatelessWidget {
   const LeaderboardView({Key? key}) : super(key: key);
@@ -13,20 +14,16 @@ class LeaderboardView extends StatelessWidget {
       backgroundColor: const Color(0xFFFDE7E4),
       appBar: AppBar(
         title: const Text(
-          '🏆 Leaderboard',
+          'Peringkat',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
-            fontSize: 20,
+            letterSpacing: 1,
           ),
         ),
         backgroundColor: const Color(0xFF73090D),
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-          onPressed: () => Get.back(),
-        ),
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
@@ -34,267 +31,234 @@ class LeaderboardView extends StatelessWidget {
             child: CircularProgressIndicator(color: Color(0xFF73090D)),
           );
         }
-        return Column(
+
+        return Stack(
           children: [
-            // Top 3 Banner
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              decoration: const BoxDecoration(
-                color: Color(0xFF73090D),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Runner up (rank 2)
-                  _buildTop3Card(
-                    rank: 2,
-                    name: controller.leaderboardList.length > 1 
-                        ? controller.leaderboardList[1]['name'] 
-                        : 'User',
-                    score: controller.leaderboardList.length > 1 
-                        ? controller.leaderboardList[1]['score'] 
-                        : 0,
-                    avatar: controller.leaderboardList.length > 1 
-                        ? controller.leaderboardList[1]['avatar'] 
-                        : 'assets/gambar/profile.png',
-                  ),
-                  // Winner (rank 1)
-                  _buildTop3Card(
-                    rank: 1,
-                    name: controller.leaderboardList.isNotEmpty 
-                        ? controller.leaderboardList[0]['name'] 
-                        : 'User',
-                    score: controller.leaderboardList.isNotEmpty 
-                        ? controller.leaderboardList[0]['score'] 
-                        : 0,
-                    avatar: controller.leaderboardList.isNotEmpty 
-                        ? controller.leaderboardList[0]['avatar'] 
-                        : 'assets/gambar/profile.png',
-                    isWinner: true,
-                  ),
-                  // Third (rank 3)
-                  _buildTop3Card(
-                    rank: 3,
-                    name: controller.leaderboardList.length > 2 
-                        ? controller.leaderboardList[2]['name'] 
-                        : 'User',
-                    score: controller.leaderboardList.length > 2 
-                        ? controller.leaderboardList[2]['score'] 
-                        : 0,
-                    avatar: controller.leaderboardList.length > 2 
-                        ? controller.leaderboardList[2]['avatar'] 
-                        : 'assets/gambar/profile.png',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            
-            // Title
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Peringkat Lainnya',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF73090D),
+            Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
                     ),
-                  ),
-                  Text(
-                    'Top 10',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            
-            // List peringkat 4 - 10
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: controller.leaderboardList.length > 3 
-                    ? controller.leaderboardList.length - 3 
-                    : 0,
-                itemBuilder: (context, index) {
-                  final item = controller.leaderboardList[index + 3];
-                  return _buildRankListItem(
-                    rank: item['rank'],
-                    name: item['name'],
-                    score: item['score'],
-                    avatar: item['avatar'],
-                  );
-                },
-              ),
-            ),
-            
-            // Current User Card
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF73090D).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF73090D), width: 1.5),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    child: Text(
-                      '${controller.currentUserRank.value}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF73090D),
-                      ),
-                    ),
-                  ),
-                  const CircleAvatar(
-                    radius: 20,
-                    backgroundImage: AssetImage('assets/gambar/profile.png'),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Kamu',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Color(0xFF73090D),
-                      ),
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.stars,
-                        size: 16,
-                        color: Color(0xFFFFD700),
-                      ),
-                      const SizedBox(width: 4),
-                      Obx(() => Text(
-                        '${controller.currentUserScore.value}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Color(0xFF73090D),
+                    child: Column(
+                      children: [
+                        _buildTopThree(controller),
+                        const SizedBox(height: 30),
+
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: controller.otherRanks.length,
+                          itemBuilder: (context, index) {
+                            final item = controller.otherRanks[index];
+
+                            return _buildRankItem(
+                              rank: item['rank'],
+                              name: item['name'],
+                              score: item['score'],
+                            );
+                          },
                         ),
-                      )),
-                    ],
+
+                        // ruang agar list tidak tertutup pinned card
+                        const SizedBox(height: 120),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+
+                const CustomBottomNavbar(currentIndex: 1),
+              ],
             ),
+
+            // PINNED USER CARD
+            _buildCurrentUserCard(controller),
           ],
         );
       }),
     );
   }
 
-  // Widget untuk Top 3 Card
-  Widget _buildTop3Card({
+  Widget _buildTopThree(LeaderboardController controller) {
+    final top3 = controller.topThree;
+
+    final rank1Name = top3.isNotEmpty ? top3[0]['name'] : 'Player';
+    final rank1Score = top3.isNotEmpty ? top3[0]['score'] : 0;
+
+    final rank2Name = top3.length > 1 ? top3[1]['name'] : 'Player';
+    final rank2Score = top3.length > 1 ? top3[1]['score'] : 0;
+
+    final rank3Name = top3.length > 2 ? top3[2]['name'] : 'Player';
+    final rank3Score = top3.length > 2 ? top3[2]['score'] : 0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF73090D), Color(0xFFFDE7E4)],
+          stops: [0.0, 1.0],
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _buildPodiumItem(
+            rank: 2,
+            name: rank2Name,
+            score: rank2Score,
+            avatarColor: const Color(0xFF9E9E9E),
+            podiumColor: const Color(0xFFBDBDBD),
+            podiumHeight: 90,
+            avatarRadius: 30,
+          ),
+
+          const SizedBox(width: 12),
+
+          _buildPodiumItem(
+            rank: 1,
+            name: rank1Name,
+            score: rank1Score,
+            avatarColor: const Color(0xFFB8860B),
+            podiumColor: const Color(0xFFDAA520),
+            podiumHeight: 130,
+            avatarRadius: 38,
+            isWinner: true,
+          ),
+
+          const SizedBox(width: 12),
+
+          _buildPodiumItem(
+            rank: 3,
+            name: rank3Name,
+            score: rank3Score,
+            avatarColor: const Color(0xFF795548),
+            podiumColor: const Color(0xFFA1887F),
+            podiumHeight: 70,
+            avatarRadius: 28,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPodiumItem({
     required int rank,
     required String name,
     required int score,
-    required String avatar,
+    required Color avatarColor,
+    required Color podiumColor,
+    required double podiumHeight,
+    required double avatarRadius,
     bool isWinner = false,
   }) {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isWinner ? Colors.amber : Colors.white,
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: CircleAvatar(
-                radius: 40,
-                backgroundImage: AssetImage(avatar),
-                backgroundColor: Colors.white,
-              ),
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: isWinner ? 3 : 2,
             ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: isWinner ? Colors.amber : Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                child: Center(
-                  child: Text(
-                    '$rank',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: isWinner ? Colors.black : const Color(0xFF73090D),
-                    ),
-                  ),
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          name,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
+            ],
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+          child: CircleAvatar(
+            radius: avatarRadius,
+            backgroundColor: avatarColor,
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isWinner ? 26 : 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ),
-        const SizedBox(height: 2),
+
+        const SizedBox(height: 8),
+
+        SizedBox(
+          width: 85,
+          child: Text(
+            name,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: isWinner ? 13 : 11,
+              color: Colors.white,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 3),
+
         Text(
-          '$score XP',
-          style: const TextStyle(
+          _formatScore(score),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: isWinner ? 12 : 11,
             color: Colors.white70,
-            fontSize: 10,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        Container(
+          width: isWinner ? 90 : 80,
+          height: podiumHeight,
+          decoration: BoxDecoration(
+            color: podiumColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: podiumColor.withOpacity(0.4),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              '$rank',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-  // Widget untuk list item (rank 4-10)
-  Widget _buildRankListItem({
+  Widget _buildRankItem({
     required int rank,
     required String name,
     required int score,
-    required String avatar,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -309,50 +273,157 @@ class LeaderboardView extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 35,
+            width: 40,
             child: Text(
-              '$rank',
+              '#$rank',
               style: TextStyle(
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.bold,
                 fontSize: 14,
                 color: Colors.grey.shade700,
               ),
             ),
           ),
+
           CircleAvatar(
-            radius: 18,
-            backgroundImage: AssetImage(avatar),
-            backgroundColor: Colors.grey.shade200,
+            radius: 20,
+            backgroundColor: const Color(0xFF73090D).withOpacity(0.2),
+            child: Text(
+              name.isNotEmpty ? name[0] : '?',
+              style: const TextStyle(
+                color: Color(0xFF73090D),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-          const SizedBox(width: 10),
+
+          const SizedBox(width: 12),
+
           Expanded(
             child: Text(
               name,
               style: const TextStyle(
-                fontSize: 13,
-                color: Colors.black87,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
+
           Row(
             children: [
               const Icon(
-                Icons.stars,
-                size: 14,
+                Icons.star,
+                size: 18,
                 color: Color(0xFFFFD700),
               ),
+
               const SizedBox(width: 4),
+
               Text(
-                '$score',
+                _formatScore(score),
                 style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Color(0xFF73090D),
                 ),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCurrentUserCard(LeaderboardController controller) {
+    return Positioned(
+      left: 16,
+      right: 16,
+      bottom: 73,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFF73090D),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 40,
+              child: Text(
+                '#${controller.currentUserRank.value}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Color(0xFF73090D),
+                ),
+              ),
+            ),
+
+            const CircleAvatar(
+              radius: 20,
+              backgroundColor: Color(0xFF73090D),
+              child: Text(
+                'K',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            const Expanded(
+              child: Text(
+                'Kamu',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Color(0xFF73090D),
+                ),
+              ),
+            ),
+
+            Row(
+              children: [
+                const Icon(
+                  Icons.star,
+                  size: 18,
+                  color: Color(0xFFFFD700),
+                ),
+
+                const SizedBox(width: 4),
+
+                Obx(() => Text(
+                  _formatScore(controller.currentUserScore.value),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Color(0xFF73090D),
+                  ),
+                )),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatScore(int score) {
+    return score.toString().replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (Match match) => '${match[1]}.',
     );
   }
 }

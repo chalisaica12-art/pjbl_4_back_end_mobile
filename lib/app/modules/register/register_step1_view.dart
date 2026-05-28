@@ -22,85 +22,45 @@ class RegisterStep1View extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tombol Back
               GestureDetector(
-                onTap: () => Get.offAllNamed('/login'),
+                onTap: () {
+                  Get.delete<RegisterController>(force: true);
+                  Get.offAllNamed('/login');
+                },
                 child: const Icon(Icons.arrow_back, color: Colors.black),
               ),
               SizedBox(height: screenHeight * 0.05),
-
-              Text(
-                'Create Account',
-                style: TextStyle(
-                  fontSize: screenWidth * 0.07,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                'Personal Info',
-                style: TextStyle(
-                  fontSize: screenWidth * 0.04,
-                  color: Colors.black,
-                ),
-              ),
+              Text('Buat Akun',
+                  style: TextStyle(fontSize: screenWidth * 0.07, fontWeight: FontWeight.bold)),
+              Text('Informasi Pribadi',
+                  style: TextStyle(fontSize: screenWidth * 0.04, color: Colors.black)),
               SizedBox(height: screenHeight * 0.05),
 
-              // Full Name
-              Text('Name',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: screenWidth * 0.035)),
+              Text('Nama', style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.035)),
               const SizedBox(height: 8),
               TextField(
                 controller: controller.nameController,
                 decoration: InputDecoration(
-                  hintText: 'Enter your name',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16, vertical: screenHeight * 0.018),
+                  hintText: 'Masukkan nama lengkap',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: screenHeight * 0.018),
                 ),
               ),
               SizedBox(height: screenHeight * 0.02),
 
-              // Username
-              Text('Username',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: screenWidth * 0.035)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller.usernameController,
-                decoration: InputDecoration(
-                  hintText: 'Enter username',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16, vertical: screenHeight * 0.018),
-                ),
-              ),
-              SizedBox(height: screenHeight * 0.02),
-
-              // No HP
-              Text('Phone Number',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: screenWidth * 0.035)),
+              Text('Nomor Telepon', style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth * 0.035)),
               const SizedBox(height: 8),
               TextField(
                 controller: controller.phoneController,
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
-                  hintText: 'Enter phone number',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16, vertical: screenHeight * 0.018),
+                  hintText: 'Masukkan nomor telepon',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: screenHeight * 0.018),
                 ),
               ),
               SizedBox(height: screenHeight * 0.05),
 
-              // Tombol Next
               GestureDetector(
                 onTap: controller.handleNext,
                 child: Container(
@@ -111,35 +71,24 @@ class RegisterStep1View extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
-                    child: Text(
-                      'Next',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: screenWidth * 0.045,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text('Selanjutnya',
+                        style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.045, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ),
               SizedBox(height: screenHeight * 0.04),
 
-              // Sudah punya akun
               GestureDetector(
-                onTap: () => Get.offAllNamed('/login'),
+                onTap: () {
+                  Get.delete<RegisterController>(force: true);
+                  Get.offAllNamed('/login');
+                },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Already have an account? ',
-                        style: TextStyle(fontSize: screenWidth * 0.035)),
-                    Text(
-                      'Login',
-                      style: TextStyle(
-                        color: const Color(0xff73090D),
-                        fontWeight: FontWeight.bold,
-                        fontSize: screenWidth * 0.035,
-                      ),
-                    ),
+                    Text('Sudah punya akun? ', style: TextStyle(fontSize: screenWidth * 0.035)),
+                    Text('Masuk',
+                        style: TextStyle(color: const Color(0xff73090D), fontWeight: FontWeight.bold, fontSize: screenWidth * 0.035)),
                   ],
                 ),
               ),
