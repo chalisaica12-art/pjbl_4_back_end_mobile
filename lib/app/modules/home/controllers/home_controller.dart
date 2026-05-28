@@ -55,7 +55,17 @@ class HomeController extends GetxController {
           .eq('category', 'journey')
           .order('order_number', ascending: true);
 
-      quizList.value = List<Map<String, dynamic>>.from(response);
+      // Ambil data mentah dari database
+      final rawQuizzes = List<Map<String, dynamic>>.from(response);
+
+      // BACKEND FILTER: Membatasi hanya Era 1, 2, dan 3 yang lolos ke View
+      final filteredQuizzes = rawQuizzes.where((quiz) {
+        final orderNum = quiz['order_number'] as int? ?? 0;
+        return orderNum == 1 || orderNum == 2 || orderNum == 3;
+      }).toList();
+
+      // Masukkan hasil saringan ke list kuis utama
+      quizList.value = filteredQuizzes;
 
       // Init like counts
       for (var quiz in quizList) {
@@ -140,18 +150,21 @@ class HomeController extends GetxController {
   }
 
   bool isUnlocked(int orderNumber) {
+    // Era 1 (Prakasa) otomatis terbuka selalu
     if (orderNumber == 1) return true;
-    // Cek apakah quiz sebelumnya sudah selesai
-    // Untuk sekarang, hanya yang pertama yang terbuka
+    
+    // Logika tambahan unlock bertahap bisa diaktifkan di sini nanti
     return false;
   }
 
   void onQuizTap(Map<String, dynamic> quiz) {
-    final isLocked = quiz['is_locked'] ?? true;
+    final orderNum = quiz['order_number'] as int? ?? 1;
+    final isLocked = !isUnlocked(orderNum); 
+    
     if (isLocked) {
       Get.snackbar(
         '',
-        'Selesaikan quiz sebelumnya terlebih dahulu!',
+        'Selesaikan kuis era sebelumnya terlebih dahulu!',
         backgroundColor: const Color(0xFF73090D),
         colorText: Colors.white,
         snackPosition: SnackPosition.BOTTOM,
@@ -162,6 +175,7 @@ class HomeController extends GetxController {
       );
       return;
     }
+    
     if (currentUserId == null) {
       Get.dialog(
         AlertDialog(
@@ -185,7 +199,6 @@ class HomeController extends GetxController {
       );
       return;
     }
-    // PERUBAHAN: dari '/detail-kuis' menjadi '/quiz-detail'
     Get.toNamed('/quiz-detail', arguments: quiz);
   }
 

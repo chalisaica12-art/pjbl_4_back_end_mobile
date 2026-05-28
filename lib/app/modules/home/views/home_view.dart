@@ -77,7 +77,7 @@ class HomeView extends StatelessWidget {
           }),
           const Align(
             alignment: Alignment.bottomCenter,
-            child: CustomBottomNavbar(currentIndex: 0), // 0 = Home
+            child: CustomBottomNavbar(currentIndex: 0),
           ),
         ],
       ),
@@ -165,7 +165,10 @@ class HomeView extends StatelessWidget {
             itemBuilder: (context, index) {
               final item = controller.quizList[index];
               final quizId = item['id'].toString();
-              final isLocked = item['is_locked'] ?? true;
+              
+              // MENGGUNAKAN LOGIKA BACKEND UNTUK LOCK STATUS
+              final isLocked = !controller.isUnlocked(item['order_number'] ?? 1);
+              
               return _journeyCard(
                 controller: controller,
                 item: item,
@@ -181,7 +184,6 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // Card dengan tulisan "5 Pertanyaan"
   Widget _journeyCard({
     required HomeController controller,
     required Map<String, dynamic> item,
@@ -195,11 +197,6 @@ class HomeView extends StatelessWidget {
         case 1: return 'Era Prakasa';
         case 2: return 'Era Kerajaan Hindu Budha';
         case 3: return 'Era Kerajaan Islam';
-        case 4: return 'Era Kolonialisme/Penjajahan';
-        case 5: return 'Era Kemerdekaan';
-        case 6: return 'Era Orde Lama';
-        case 7: return 'Era Orde Baru';
-        case 8: return 'Reformasi';
         default: return item['title'] ?? 'Quiz Title';
       }
     }
@@ -313,7 +310,7 @@ class HomeView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    getEraTitle(item['order_number']), // <-- JUDUL SUDAH DIGANTI
+                    getEraTitle(item['order_number']),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -323,7 +320,6 @@ class HomeView extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  // Tulisan "5 Pertanyaan" (tanpa icon)
                   Text(
                     '5 Pertanyaan',
                     style: TextStyle(
