@@ -57,13 +57,13 @@ class LoginController extends GetxController {
         password: passwordController.text.trim(),
       );
 
-      _showSnackbar('Berhasil Masuk! ✓', Colors.green);
+      _showSnackbar('Berhasil Masuk', Colors.green);
       await Future.delayed(const Duration(milliseconds: 1500));
       Get.offAllNamed('/home');
 
     } on AuthException catch (e) {
       String pesanError = e.message;
-      if (e.message.contains('Invalid login credentials')) {
+      if (e.message.contains('Email atau kata sandi salah')) {
         pesanError = 'Email atau kata sandi salah';
       } else if (e.message.contains('Email not confirmed')) {
         pesanError = 'Email belum dikonfirmasi';

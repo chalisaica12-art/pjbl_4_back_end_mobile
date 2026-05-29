@@ -44,7 +44,7 @@ class ProfileController extends GetxController {
       currentXP.value = response['xp'] ?? 0;
       userStars.value = response['stars'] ?? 0;
       activeAvatarId.value = response['active_avatar_id'] ?? 1;
-      
+
       final unlockedList = response['unlocked_avatar_ids'];
       if (unlockedList != null) {
         unlockedAvatarIds.value = List<int>.from(unlockedList);
@@ -67,14 +67,18 @@ class ProfileController extends GetxController {
     return 'History Master';
   }
 
-  void _loadAvatars() {
-    avatars.value = [
-      AvatarModel(id: 1, name: "Ksatria", imageUrl: "assets/gambar/ksatria.png", priceStars: 0, isDefault: true),
-      AvatarModel(id: 2, name: "Penyihir", imageUrl: "assets/gambar/penyihir.png", priceStars: 100),
-      AvatarModel(id: 3, name: "Elf", imageUrl: "assets/gambar/elf.png", priceStars: 250),
-      AvatarModel(id: 4, name: "Monster", imageUrl: "assets/gambar/monster.png", priceStars: 500),
-      AvatarModel(id: 5, name: "Naga", imageUrl: "assets/gambar/naga.png", priceStars: 1000),
-    ];
+  Future<void> _loadAvatars() async {
+    try {
+      final response = await supabase
+          .from('avatars')
+          .select()
+          .order('price_stars', ascending: true); // ✅ urut dari termurah
+      avatars.value = (response as List)
+          .map((e) => AvatarModel.fromJson(e))
+          .toList();
+    } catch (e) {
+      print('Error load avatars: $e');
+    }
   }
 
   double get xpProgress {
@@ -89,7 +93,7 @@ class ProfileController extends GetxController {
 
   String get activeAvatarImage {
     final avatar = avatars.firstWhereOrNull((a) => a.id == activeAvatarId.value);
-    return avatar?.imageUrl ?? "assets/gambar/gam1.png";
+    return avatar?.imagePath ?? "assets/gambar/gam1.png";
   }
 
   String getAvatarName(int id) {
@@ -128,8 +132,12 @@ class ProfileController extends GetxController {
       activeAvatarId.value = avatarId;
       await supabase.from('profiles')
           .update({'active_avatar_id': avatarId}).eq('id', userId!);
-      Get.snackbar("Sukses", "Avatar ${getAvatarName(avatarId)} aktif!",
-          backgroundColor: Colors.blue, colorText: Colors.white);
+      Get.snackbar(
+        "Sukses",
+        "Avatar ${getAvatarName(avatarId)} aktif!",
+        backgroundColor: const Color(0xFFFDE7E4),
+        colorText: const Color.fromARGB(255, 0, 0, 0),
+      );
     }
   }
 
@@ -154,6 +162,7 @@ class ProfileController extends GetxController {
 
   Future<void> logout() async {
     await supabase.auth.signOut();
-    Get.offAllNamed('/home');
+    Get.delete<ProfileController>(force: true);
+    Get.offAllNamed('/login');
   }
 }

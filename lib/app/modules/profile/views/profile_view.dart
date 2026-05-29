@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/profile_controller.dart';
 import '../../../widgets/custom_bottom_navbar.dart';
+import '../../../data/models/avatar_model.dart';
+import '../../home/controllers/home_controller.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    controller.fetchProfile();
     final screenHeight = MediaQuery.of(context).size.height;
     final appBarHeight = AppBar().preferredSize.height;
     final statusBarHeight = MediaQuery.of(context).padding.top;
@@ -15,7 +18,6 @@ class ProfileView extends GetView<ProfileController> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDE7E4),
-
       appBar: AppBar(
         backgroundColor: const Color(0xFF8B0000),
         elevation: 0,
@@ -27,17 +29,13 @@ class ProfileView extends GetView<ProfileController> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.white),
-            onPressed: () {
-              Get.snackbar("Info", "Pengaturan");
-            },
+            onPressed: () => Get.snackbar("Info", "Pengaturan"),
           ),
         ],
       ),
-
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // ================= PROFILE HEADER =================
             Container(
               width: double.infinity,
               height: redSectionHeight,
@@ -53,41 +51,32 @@ class ProfileView extends GetView<ProfileController> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // AVATAR
+                    // ============ AVATAR FULL LINGKARAN SEMPURNA ============
                     Obx(() => Container(
+                      width: 100,
+                      height: 100,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 4),
-                      ),
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.amber.shade200,
-                        child: Text(
-                          _getAvatarEmoji(controller.activeAvatarId.value),
-                          style: const TextStyle(fontSize: 50),
+                        image: DecorationImage(
+                          image: controller.activeAvatarImage.startsWith('http')
+                              ? NetworkImage(controller.activeAvatarImage)
+                              : AssetImage(controller.activeAvatarImage) as ImageProvider,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     )),
-                    
                     const SizedBox(width: 20),
-                    
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            "Naura",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
+                          Obx(() => Text(
+                            controller.userName.value.isEmpty ? 'Guest' : controller.userName.value,
+                            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                          )),
                           const SizedBox(height: 8),
-                          
-                          // Bintang
                           Obx(() => Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
@@ -101,23 +90,23 @@ class ProfileView extends GetView<ProfileController> {
                                 const SizedBox(width: 4),
                                 Text(
                                   "${controller.userStars.value} Skor",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                                 ),
                               ],
                             ),
                           )),
-                          
                           const SizedBox(height: 14),
-                          
-                          // ================= TOMBOL EDIT PROFILE (SUDAH AKTIF) =================
                           ElevatedButton(
-                            onPressed: () {
-                              // Pindah ke halaman edit profile menggunakan rute GetX
-                              Get.toNamed('/edit-profile');
+                            onPressed: () async {
+                              final result = await Get.toNamed('/edit-profile');
+                              if (result == true) {
+                                await controller.fetchProfile();
+                                if (Get.isRegistered<HomeController>()) {
+                                  await Get.find<HomeController>().fetchUserProfile();
+                                }
+                                Get.snackbar("Sukses", "Profil berhasil diperbarui",
+                                    backgroundColor: Colors.green, colorText: Colors.white);
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFD32F2F),
@@ -139,10 +128,7 @@ class ProfileView extends GetView<ProfileController> {
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // ================= XP PROGRESS CARD =================
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -159,34 +145,25 @@ class ProfileView extends GetView<ProfileController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Obx(() => Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.star, color: Colors.amber, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Level ${controller.userLevel.value} - ${controller.levelTitle.value}",
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                        const Icon(Icons.star, color: Colors.amber, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Level ${controller.userLevel.value} - ${controller.levelTitle.value}",
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ],
                     )),
                     const SizedBox(height: 12),
-                    
                     Obx(() => Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text("XP", style: TextStyle(color: Colors.white70)),
-                        Text(
-                          "${controller.currentXP.value} / ${controller.maxXP.value} XP",
-                          style: const TextStyle(color: Colors.white),
-                        ),
+                        Text("${controller.currentXP.value} / ${controller.maxXP.value} XP",
+                            style: const TextStyle(color: Colors.white)),
                       ],
                     )),
                     const SizedBox(height: 8),
-                    
                     Obx(() => ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
@@ -196,7 +173,6 @@ class ProfileView extends GetView<ProfileController> {
                         minHeight: 8,
                       ),
                     )),
-                    
                     const SizedBox(height: 8),
                     Obx(() => Text(
                       "${controller.xpPercentage}% to Level ${controller.userLevel.value + 1}",
@@ -206,62 +182,30 @@ class ProfileView extends GetView<ProfileController> {
                 ),
               ),
             ),
-
             const SizedBox(height: 24),
-
-            // ================= MENU ITEMS =================
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  _buildMenuItem(
-                    icon: Icons.language,
-                    title: "Bahasa",
-                    onTap: () {
-                      Get.snackbar("Bahasa", "Pilih bahasa");
-                    },
-                  ),
+                  _buildMenuItem(icon: Icons.language, title: "Bahasa", onTap: () => Get.snackbar("Bahasa", "Pilih bahasa")),
                   const Divider(color: Colors.black12, height: 1),
-                  
-                  _buildMenuItem(
-                    icon: Icons.notifications_outlined,
-                    title: "Notifikasi",
-                    onTap: () {
-                      Get.snackbar("Notifikasi", "Pengaturan notifikasi");
-                    },
-                  ),
+                  _buildMenuItem(icon: Icons.notifications_outlined, title: "Notifikasi", onTap: () => Get.snackbar("Notifikasi", "Pengaturan notifikasi")),
                   const Divider(color: Colors.black12, height: 1),
-                  
-                  _buildMenuItem(
-                    icon: Icons.shopping_bag_outlined,
-                    title: "Toko Avatar",
-                    onTap: () => _showAvatarShop(),
-                  ),
+                  _buildMenuItem(icon: Icons.shopping_bag_outlined, title: "Toko Avatar", onTap: () => _showAvatarShop()),
                   const Divider(color: Colors.black12, height: 1),
-                  
-                  _buildMenuItem(
-                    icon: Icons.logout,
-                    title: "Keluar",
-                    onTap: () => _showLogoutDialog(),
-                  ),
+                  _buildMenuItem(icon: Icons.logout, title: "Keluar", onTap: () => _showLogoutDialog()),
                 ],
               ),
             ),
-
             const SizedBox(height: 80),
           ],
         ),
       ),
-
       bottomNavigationBar: const CustomBottomNavbar(currentIndex: 2),
     );
   }
 
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildMenuItem({required IconData icon, required String title, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -270,16 +214,7 @@ class ProfileView extends GetView<ProfileController> {
           children: [
             Icon(icon, color: Colors.black87, size: 24),
             const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87))),
             const Icon(Icons.chevron_right, color: Colors.black54, size: 24),
           ],
         ),
@@ -287,7 +222,6 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  // ================= AVATAR SHOP BOTTOM SHEET =================
   void _showAvatarShop() {
     Get.bottomSheet(
       Container(
@@ -311,12 +245,8 @@ class ProfileView extends GetView<ProfileController> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              "Toko Avatar",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+            const Text("Toko Avatar", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-
             Obx(() => Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -328,9 +258,7 @@ class ProfileView extends GetView<ProfileController> {
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             )),
-
             const SizedBox(height: 16),
-
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -339,14 +267,16 @@ class ProfileView extends GetView<ProfileController> {
                     crossAxisCount: 2,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: 0.9,
+                    childAspectRatio: 0.85,
                   ),
                   itemCount: controller.avatars.length,
                   itemBuilder: (context, index) {
                     final avatar = controller.avatars[index];
-                    final isUnlocked = controller.isAvatarUnlocked(avatar.id);
-                    final isActive = controller.isAvatarActive(avatar.id);
-                    return _buildAvatarCard(avatar, isUnlocked, isActive);
+                    return Obx(() => _buildAvatarCard(
+                      avatar,
+                      controller.isAvatarUnlocked(avatar.id),
+                      controller.isAvatarActive(avatar.id),
+                    ));
                   },
                 )),
               ),
@@ -358,14 +288,12 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  Widget _buildAvatarCard(dynamic avatar, bool isUnlocked, bool isActive) {
+  Widget _buildAvatarCard(AvatarModel avatar, bool isUnlocked, bool isActive) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(16),
-        border: isActive
-            ? Border.all(color: const Color(0xFF8B0000), width: 3)
-            : null,
+        border: isActive ? Border.all(color: const Color(0xFF8B0000), width: 3) : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -380,20 +308,15 @@ class ProfileView extends GetView<ProfileController> {
           Stack(
             alignment: Alignment.center,
             children: [
+              // AVATAR FULL LINGKARAN
               Container(
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: isUnlocked ? Colors.amber.shade100 : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(50),
-                ),
-                child: Center(
-                  child: Text(
-                    _getAvatarEmoji(avatar.id),
-                    style: TextStyle(
-                      fontSize: 45,
-                      color: isUnlocked ? Colors.brown : Colors.grey,
-                    ),
+                  shape: BoxShape.circle,
+                  image: DecorationImage(
+                    image: AssetImage(avatar.imagePath),
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
@@ -403,41 +326,32 @@ class ProfileView extends GetView<ProfileController> {
                   height: 80,
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(50),
+                    shape: BoxShape.circle,
                   ),
                   child: const Center(
-                    child: Icon(
-                      Icons.lock,
-                      color: Colors.white,
-                      size: 30,
-                    ),
+                    child: Icon(Icons.lock, color: Colors.white, size: 30),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            avatar.name,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(
-            "${avatar.priceStars} ⭐",
-            style: const TextStyle(fontSize: 12),
-          ),
-          const SizedBox(height: 8),
-
+          const SizedBox(height: 12),
           if (isUnlocked)
             ElevatedButton(
               onPressed: () {
                 controller.useAvatar(avatar.id);
                 Get.back();
-                Get.snackbar("Sukses", "Avatar ${avatar.name} aktif!");
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: isActive ? Colors.green : const Color(0xFF8B0000),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
-              child: Text(isActive ? "Active" : "Pakai"),
+              child: Text(
+                isActive ? "Active" : "Pakai",
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
             )
           else
             ElevatedButton(
@@ -449,34 +363,20 @@ class ProfileView extends GetView<ProfileController> {
                     }
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey,
+                backgroundColor: Colors.grey[400],
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
               child: const Text(
                 "Buka",
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Colors.white, fontSize: 13),
               ),
             ),
         ],
       ),
     );
-  }
-
-  String _getAvatarEmoji(int avatarId) {
-    switch (avatarId) {
-      case 1:
-        return "⚔️";
-      case 2:
-        return "🔮";
-      case 3:
-        return "🏹";
-      case 4:
-        return "👹";
-      case 5:
-        return "🐉";
-      default:
-        return "😊";
-    }
   }
 
   void _showLogoutDialog() {
@@ -495,10 +395,7 @@ class ProfileView extends GetView<ProfileController> {
               Get.back();
               controller.logout();
             },
-            child: const Text(
-              "Keluar",
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text("Keluar", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

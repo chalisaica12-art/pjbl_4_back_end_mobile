@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../profile/controllers/profile_controller.dart';
+import '../../home/controllers/home_controller.dart';
 
 class EditProfileController extends GetxController {
   final supabase = Supabase.instance.client;
@@ -8,7 +10,6 @@ class EditProfileController extends GetxController {
 
   final nameController = TextEditingController();
   final emailController = TextEditingController();
-  final usernameController = TextEditingController();
   final phoneController = TextEditingController();
   var isLoading = false.obs;
 
@@ -19,41 +20,81 @@ class EditProfileController extends GetxController {
   }
 
   Future<void> fetchProfile() async {
-    if (userId == null) return;
+    if (userId == null) {
+      print("UserId null, tidak bisa fetch profile");
+      return;
+    }
+    
     try {
+      print("Fetching profile for user: $userId");
       final response = await supabase
           .from('profiles')
           .select()
           .eq('id', userId!)
-          .single();
-      nameController.text = response['name'] ?? '';
-      emailController.text = response['email'] ?? '';
-      usernameController.text = response['username'] ?? '';
-      phoneController.text = response['phone'] ?? '';
+          .maybeSingle();
+      
+      if (response != null) {
+        nameController.text = response['name'] ?? '';
+        emailController.text = response['email'] ?? '';
+        phoneController.text = response['phone'] ?? '';
+        print("Profile loaded: Nama=${nameController.text}, Email=${emailController.text}");
+      } else {
+        print("Profile not found for user: $userId");
+      }
     } catch (e) {
-      print('Error: $e');
+      print('Error fetch profile: $e');
+      Get.snackbar("Error", "Gagal memuat profil: $e",
+          backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
 
   Future<void> saveProfile() async {
-    if (userId == null) return;
-    if (nameController.text.isEmpty) {
+    if (userId == null) {
+      Get.snackbar("Error", "User tidak ditemukan",
+          backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+    
+    if (nameController.text.trim().isEmpty) {
       Get.snackbar("Error", "Nama tidak boleh kosong",
           backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
+    
     try {
       isLoading.value = true;
+      print("Saving profile for user: $userId");
+      print("Data: name=${nameController.text.trim()}, phone=${phoneController.text.trim()}");
+      
       await supabase.from('profiles').update({
         'name': nameController.text.trim(),
-        'username': usernameController.text.trim(),
         'phone': phoneController.text.trim(),
       }).eq('id', userId!);
-      Get.snackbar("Sukses", "Profil berhasil diperbarui!",
-          backgroundColor: const Color(0xFF8B0000), colorText: Colors.white);
-      Get.back();
+      
+      Get.snackbar(
+      "Sukses", 
+      "Profil berhasil diperbarui!",
+      backgroundColor: const Color(0xFFFDE7E4), // Ganti 2ECC71 dengan kode hex Anda
+      colorText: const Color.fromARGB(255, 0, 0, 0),       // Ganti 1A1A1A dengan kode hex Anda
+    );
+      
+      // ============ CARA 1: KEMBALI KE PROFILE DAN REFRESH ============
+      // Kembali ke halaman profile
+      await Get.offNamed('/profile');
+      
+      // Refresh profile controller setelah kembali
+      if (Get.isRegistered<ProfileController>()) {
+        await Get.find<ProfileController>().fetchProfile();
+      }
+      
+      // Refresh home controller juga
+      if (Get.isRegistered<HomeController>()) {
+        await Get.find<HomeController>().fetchUserProfile();
+      }
+      
     } catch (e) {
-      Get.snackbar("Gagal", "Terjadi kesalahan",
+      print('Error save profile: $e');
+      Get.snackbar("Gagal", "Terjadi kesalahan: $e",
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
       isLoading.value = false;
@@ -64,7 +105,6 @@ class EditProfileController extends GetxController {
   void onClose() {
     nameController.dispose();
     emailController.dispose();
-    usernameController.dispose();
     phoneController.dispose();
     super.onClose();
   }
