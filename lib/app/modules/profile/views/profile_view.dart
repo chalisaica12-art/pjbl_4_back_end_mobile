@@ -4,17 +4,26 @@ import '../controllers/profile_controller.dart';
 import '../../../widgets/custom_bottom_navbar.dart';
 import '../../../data/models/avatar_model.dart';
 import '../../home/controllers/home_controller.dart';
+import '../../leaderboard/controllers/leaderboard_controller.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Cek apakah guest
+    final isGuest = controller.userId == null;
+
+    if (isGuest) {
+      return _buildGuestView();
+    }
+
     controller.fetchProfile();
     final screenHeight = MediaQuery.of(context).size.height;
     final appBarHeight = AppBar().preferredSize.height;
     final statusBarHeight = MediaQuery.of(context).padding.top;
-    final redSectionHeight = (screenHeight / 3) - appBarHeight - statusBarHeight;
+    final redSectionHeight =
+        (screenHeight / 3) - appBarHeight - statusBarHeight;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDE7E4),
@@ -24,7 +33,10 @@ class ProfileView extends GetView<ProfileController> {
         automaticallyImplyLeading: false,
         title: const Text(
           "Profil Saya",
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -51,21 +63,45 @@ class ProfileView extends GetView<ProfileController> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // ============ AVATAR FULL LINGKARAN SEMPURNA ============
+                    // ✅ AVATAR DENGAN INISIAL KALAU KOSONG
                     Obx(() => Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 4),
-                        image: DecorationImage(
-                          image: controller.activeAvatarImage.startsWith('http')
-                              ? NetworkImage(controller.activeAvatarImage)
-                              : AssetImage(controller.activeAvatarImage) as ImageProvider,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    )),
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 4),
+                          ),
+                          child: ClipOval(
+                            child: controller.activeAvatarImage.isEmpty
+                                ? CircleAvatar(
+                                    radius: 50,
+                                    backgroundColor: const Color(0xFFD32F2F),
+                                    child: Text(
+                                      controller.userName.value.isNotEmpty
+                                          ? controller.userName.value[0].toUpperCase()
+                                          : '?',
+                                      style: const TextStyle(
+                                        fontSize: 40,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )
+                                : (controller.activeAvatarImage.startsWith('http')
+                                    ? Image.network(
+                                        controller.activeAvatarImage,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.asset(
+                                        controller.activeAvatarImage,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                      )),
+                          ),
+                        )),
                     const SizedBox(width: 20),
                     Expanded(
                       child: Column(
@@ -73,52 +109,73 @@ class ProfileView extends GetView<ProfileController> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Obx(() => Text(
-                            controller.userName.value.isEmpty ? 'Guest' : controller.userName.value,
-                            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                          )),
+                                controller.userName.value.isEmpty
+                                    ? 'Guest'
+                                    : controller.userName.value,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold),
+                              )),
                           const SizedBox(height: 8),
                           Obx(() => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.amber,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.star, color: Colors.white, size: 16),
-                                const SizedBox(width: 4),
-                                Text(
-                                  "${controller.userStars.value} Skor",
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber,
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
-                              ],
-                            ),
-                          )),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.star,
+                                        color: Colors.white, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "${controller.userStars.value} Skor",
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              )),
                           const SizedBox(height: 14),
                           ElevatedButton(
                             onPressed: () async {
-                              final result = await Get.toNamed('/edit-profile');
+                              final result =
+                                  await Get.toNamed('/edit-profile');
                               if (result == true) {
                                 await controller.fetchProfile();
                                 if (Get.isRegistered<HomeController>()) {
-                                  await Get.find<HomeController>().fetchUserProfile();
+                                  await Get.find<HomeController>()
+                                      .fetchUserProfile();
                                 }
-                                Get.snackbar("Sukses", "Profil berhasil diperbarui",
-                                    backgroundColor: Colors.green, colorText: Colors.white);
+                                if (Get.isRegistered<LeaderboardController>()) {
+                                  await Get.find<LeaderboardController>()
+                                      .fetchLeaderboard();
+                                }
+                                Get.snackbar(
+                                    "Sukses", "Profil berhasil diperbarui",
+                                    backgroundColor: Colors.green,
+                                    colorText: Colors.white);
                               }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFD32F2F),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 10),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
                             ),
                             child: const Text(
                               "Edit Profile",
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -145,39 +202,49 @@ class ProfileView extends GetView<ProfileController> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Obx(() => Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Level ${controller.userLevel.value} - ${controller.levelTitle.value}",
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    )),
+                          children: [
+                            const Icon(Icons.star,
+                                color: Colors.amber, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Level ${controller.userLevel.value} - ${controller.levelTitle.value}",
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        )),
                     const SizedBox(height: 12),
                     Obx(() => Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("XP", style: TextStyle(color: Colors.white70)),
-                        Text("${controller.currentXP.value} / ${controller.maxXP.value} XP",
-                            style: const TextStyle(color: Colors.white)),
-                      ],
-                    )),
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("XP",
+                                style:
+                                    TextStyle(color: Colors.white70)),
+                            Text(
+                                "${controller.currentXP.value} / ${controller.maxXP.value} XP",
+                                style: const TextStyle(
+                                    color: Colors.white)),
+                          ],
+                        )),
                     const SizedBox(height: 8),
                     Obx(() => ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: controller.xpProgress,
-                        backgroundColor: Colors.white30,
-                        valueColor: const AlwaysStoppedAnimation(Colors.amber),
-                        minHeight: 8,
-                      ),
-                    )),
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: controller.xpProgress,
+                            backgroundColor: Colors.white30,
+                            valueColor: const AlwaysStoppedAnimation(
+                                Colors.amber),
+                            minHeight: 8,
+                          ),
+                        )),
                     const SizedBox(height: 8),
                     Obx(() => Text(
-                      "${controller.xpPercentage}% to Level ${controller.userLevel.value + 1}",
-                      style: const TextStyle(color: Colors.white70, fontSize: 11),
-                    )),
+                          "${controller.xpPercentage}% to Level ${controller.userLevel.value + 1}",
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 11),
+                        )),
                   ],
                 ),
               ),
@@ -187,13 +254,27 @@ class ProfileView extends GetView<ProfileController> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  _buildMenuItem(icon: Icons.language, title: "Bahasa", onTap: () => Get.snackbar("Bahasa", "Pilih bahasa")),
+                  _buildMenuItem(
+                      icon: Icons.language,
+                      title: "Bahasa",
+                      onTap: () =>
+                          Get.snackbar("Bahasa", "Pilih bahasa")),
                   const Divider(color: Colors.black12, height: 1),
-                  _buildMenuItem(icon: Icons.notifications_outlined, title: "Notifikasi", onTap: () => Get.snackbar("Notifikasi", "Pengaturan notifikasi")),
+                  _buildMenuItem(
+                      icon: Icons.notifications_outlined,
+                      title: "Notifikasi",
+                      onTap: () => Get.snackbar(
+                          "Notifikasi", "Pengaturan notifikasi")),
                   const Divider(color: Colors.black12, height: 1),
-                  _buildMenuItem(icon: Icons.shopping_bag_outlined, title: "Toko Avatar", onTap: () => _showAvatarShop()),
+                  _buildMenuItem(
+                      icon: Icons.shopping_bag_outlined,
+                      title: "Toko Avatar",
+                      onTap: () => _showAvatarShop()),
                   const Divider(color: Colors.black12, height: 1),
-                  _buildMenuItem(icon: Icons.logout, title: "Keluar", onTap: () => _showLogoutDialog()),
+                  _buildMenuItem(
+                      icon: Icons.logout,
+                      title: "Keluar",
+                      onTap: () => _showLogoutDialog()),
                 ],
               ),
             ),
@@ -205,7 +286,185 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  Widget _buildMenuItem({required IconData icon, required String title, required VoidCallback onTap}) {
+  // ✅ Tampilan saat belum login
+  Widget _buildGuestView() {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFDE7E4),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF8B0000),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        title: const Text(
+          "Profil Saya",
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const SizedBox(height: 30),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 36),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF8B0000), Color(0xFFD32F2F)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.person,
+                          size: 50, color: Color(0xFF8B0000)),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      "Masuk untuk melihat profil",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Masuk untuk menyimpan skor, \ndan membuka avatar keren!",
+                      style: TextStyle(
+                          color: Colors.white70, fontSize: 13),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => Get.toNamed('/login'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF8B0000),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 14),
+                      ),
+                      child: const Text(
+                        "Masuk",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: () => Get.toNamed('/register'),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                            color: Colors.white, width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 40, vertical: 14),
+                      ),
+                      child: const Text(
+                        "Daftar",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _buildMenuItemSimple(
+                        icon: Icons.language,
+                        title: "Bahasa",
+                        onTap: () =>
+                            Get.snackbar("Bahasa", "Pilih bahasa")),
+                    const Divider(
+                        color: Colors.black12,
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16),
+                    _buildMenuItemSimple(
+                        icon: Icons.notifications_outlined,
+                        title: "Notifikasi",
+                        onTap: () => Get.snackbar(
+                            "Notifikasi", "Pengaturan notifikasi")),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: const CustomBottomNavbar(currentIndex: 2),
+    );
+  }
+
+  Widget _buildMenuItemSimple(
+      {required IconData icon,
+      required String title,
+      required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.black87, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+                child: Text(title,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87))),
+            const Icon(Icons.chevron_right,
+                color: Colors.black54, size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuItem(
+      {required IconData icon,
+      required String title,
+      required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -214,8 +473,14 @@ class ProfileView extends GetView<ProfileController> {
           children: [
             Icon(icon, color: Colors.black87, size: 24),
             const SizedBox(width: 16),
-            Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87))),
-            const Icon(Icons.chevron_right, color: Colors.black54, size: 24),
+            Expanded(
+                child: Text(title,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87))),
+            const Icon(Icons.chevron_right,
+                color: Colors.black54, size: 24),
           ],
         ),
       ),
@@ -245,40 +510,45 @@ class ProfileView extends GetView<ProfileController> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text("Toko Avatar", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const Text("Toko Avatar",
+                style:
+                    TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Obx(() => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.amber,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                "⭐ ${controller.userStars.value} Skor",
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            )),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    "⭐ ${controller.userStars.value} Skor",
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                )),
             const SizedBox(height: 16),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Obx(() => GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 0.85,
-                  ),
-                  itemCount: controller.avatars.length,
-                  itemBuilder: (context, index) {
-                    final avatar = controller.avatars[index];
-                    return Obx(() => _buildAvatarCard(
-                      avatar,
-                      controller.isAvatarUnlocked(avatar.id),
-                      controller.isAvatarActive(avatar.id),
-                    ));
-                  },
-                )),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.75,
+                      ),
+                      itemCount: controller.avatars.length,
+                      itemBuilder: (context, index) {
+                        final avatar = controller.avatars[index];
+                        return Obx(() => _buildAvatarCard(
+                              avatar,
+                              controller.isAvatarUnlocked(avatar.id),
+                              controller.isAvatarActive(avatar.id),
+                            ));
+                      },
+                    )),
               ),
             ),
           ],
@@ -288,12 +558,15 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  Widget _buildAvatarCard(AvatarModel avatar, bool isUnlocked, bool isActive) {
+  Widget _buildAvatarCard(
+      AvatarModel avatar, bool isUnlocked, bool isActive) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(16),
-        border: isActive ? Border.all(color: const Color(0xFF8B0000), width: 3) : null,
+        border: isActive
+            ? Border.all(color: const Color(0xFF8B0000), width: 3)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -308,16 +581,13 @@ class ProfileView extends GetView<ProfileController> {
           Stack(
             alignment: Alignment.center,
             children: [
-              // AVATAR FULL LINGKARAN
               Container(
                 width: 80,
                 height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  image: DecorationImage(
-                    image: AssetImage(avatar.imagePath),
-                    fit: BoxFit.cover,
-                  ),
+                decoration: const BoxDecoration(shape: BoxShape.circle),
+                child: ClipOval(
+                  child: Image.asset(avatar.imagePath,
+                      width: 80, height: 80, fit: BoxFit.cover),
                 ),
               ),
               if (!isUnlocked)
@@ -329,29 +599,40 @@ class ProfileView extends GetView<ProfileController> {
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
-                    child: Icon(Icons.lock, color: Colors.white, size: 30),
-                  ),
+                      child: Icon(Icons.lock,
+                          color: Colors.white, size: 30)),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          Text(avatar.name,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 2),
+          if (avatar.priceStars > 0)
+            Text("${avatar.priceStars} ⭐",
+                style:
+                    const TextStyle(fontSize: 12, color: Colors.amber)),
+          if (avatar.priceStars == 0)
+            const Text("Gratis",
+                style: TextStyle(fontSize: 12, color: Colors.green)),
+          const SizedBox(height: 8),
           if (isUnlocked)
             ElevatedButton(
               onPressed: () {
                 controller.useAvatar(avatar.id);
-                Get.back();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: isActive ? Colors.green : const Color(0xFF8B0000),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                backgroundColor:
+                    isActive ? Colors.green : const Color(0xFF8B0000),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 8),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                    borderRadius: BorderRadius.circular(20)),
               ),
-              child: Text(
-                isActive ? "Active" : "Pakai",
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-              ),
+              child: Text(isActive ? "Active" : "Pakai",
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 13)),
             )
           else
             ElevatedButton(
@@ -364,15 +645,13 @@ class ProfileView extends GetView<ProfileController> {
                   : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[400],
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 8),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                    borderRadius: BorderRadius.circular(20)),
               ),
-              child: const Text(
-                "Buka",
-                style: TextStyle(color: Colors.white, fontSize: 13),
-              ),
+              child: const Text("Buka",
+                  style: TextStyle(color: Colors.white, fontSize: 13)),
             ),
         ],
       ),
@@ -382,20 +661,21 @@ class ProfileView extends GetView<ProfileController> {
   void _showLogoutDialog() {
     Get.dialog(
       AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text("Keluar"),
         content: const Text("Apakah Anda yakin ingin keluar?"),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
-            child: const Text("Batal"),
-          ),
+              onPressed: () => Get.back(),
+              child: const Text("Batal")),
           TextButton(
             onPressed: () {
               Get.back();
               controller.logout();
             },
-            child: const Text("Keluar", style: TextStyle(color: Colors.red)),
+            child:
+                const Text("Keluar", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

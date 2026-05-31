@@ -52,16 +52,38 @@ class EditProfileView extends StatelessWidget {
                 ),
               ),
               child: Center(
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4),
-                  ),
-                  child: const CircleAvatar(
-                    radius: 50,
-                    backgroundImage: AssetImage("assets/gambar/gam1.png"),
-                  ),
-                ),
+                // ✅ PERUBAHAN: ganti hardcode AssetImage → Obx baca activeAvatarImage
+                child: Obx(() {
+                  final avatarImage = controller.activeAvatarImage.value;
+                  return Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 4),
+                    ),
+                    child: ClipOval(
+                      child: avatarImage.isEmpty
+                          ? Image.asset(
+                              "assets/gambar/gam1.png",
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.contain,
+                            )
+                          : avatarImage.startsWith('http')
+                              ? Image.network(
+                                  avatarImage,
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.contain,
+                                )
+                              : Image.asset(
+                                  avatarImage,
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.contain,
+                                ),
+                    ),
+                  );
+                }),
               ),
             ),
             const SizedBox(height: 30),

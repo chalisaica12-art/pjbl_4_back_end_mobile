@@ -16,29 +16,115 @@ class HomeView extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFFFDE7E4),
         elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 19),
-          child: Obx(() => CircleAvatar(
-            backgroundImage: controller.userAvatar.value.isNotEmpty
-                ? NetworkImage(controller.userAvatar.value)
-                : const AssetImage("assets/gambar/profile.png") as ImageProvider,
-            radius: 40,
-          )),
-        ),
-        title: Obx(() => RichText(
-          text: TextSpan(
-            children: [
-              const TextSpan(
-                text: "Selamat Datang\n",
-                style: TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w700),
+        // ✅ AVATAR DENGAN INISIAL KALAU KOSONG
+        leading: controller.isGuest
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(left: 19),
+                child: Obx(() {
+                  final avatar = controller.userAvatar.value;
+                  final userName = controller.userName.value;
+                  
+                  // ✅ KALAU AVATAR KOSONG, TAMPILKAN INISIAL
+                  if (avatar.isEmpty) {
+                    final initial = userName.isNotEmpty
+                        ? userName[0].toUpperCase()
+                        : '?';
+                    return CircleAvatar(
+                      radius: 40,
+                      backgroundColor: const Color(0xFF73090D),
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  }
+                  
+                  // ✅ KALAU ADA AVATAR, TAMPILKAN FOTO
+                  return CircleAvatar(
+                    radius: 40,
+                    backgroundImage: avatar.startsWith('http')
+                        ? NetworkImage(avatar) as ImageProvider
+                        : AssetImage(avatar) as ImageProvider,
+                    backgroundColor: Colors.grey.shade200,
+                    onBackgroundImageError: (_, __) {
+                      // Kalau error, fallback ke inisial
+                    },
+                  );
+                }),
               ),
-              TextSpan(
-                text: "Halo, ${controller.userName.value}!",
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
-              ),
-            ],
-          ),
-        )),
+        title: controller.isGuest
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => Get.toNamed('/login'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF73090D)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Masuk',
+                      style: TextStyle(
+                          color: Color(0xFF73090D),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () => Get.toNamed('/register'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF73090D),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Daftar',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13),
+                    ),
+                  ),
+                ],
+              )
+            : Obx(() => RichText(
+                  text: TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: "Selamat Datang\n",
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w700),
+                      ),
+                      TextSpan(
+                        text: "Halo, ${controller.userName.value}!",
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black),
+                      ),
+                    ],
+                  ),
+                )),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined, color: Colors.black),
@@ -46,17 +132,20 @@ class HomeView extends StatelessWidget {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                   title: const Text("Notifikasi"),
                   content: const Text("Apakah Anda ingin mengaktifkan notifikasi?"),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text("Tidak", style: TextStyle(color: Colors.black)),
+                      child: const Text("Tidak",
+                          style: TextStyle(color: Colors.black)),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text("Ya", style: TextStyle(color: Color(0xff73090D))),
+                      child: const Text("Ya",
+                          style: TextStyle(color: Color(0xff73090D))),
                     ),
                   ],
                 ),
@@ -90,7 +179,6 @@ class HomeView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Banner Carousel
           Container(
             height: 180,
             decoration: BoxDecoration(
@@ -107,7 +195,8 @@ class HomeView extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               child: PageView.builder(
                 controller: controller.pageController,
-                onPageChanged: (index) => controller.currentBannerPage.value = index,
+                onPageChanged: (index) =>
+                    controller.currentBannerPage.value = index,
                 itemCount: controller.bannerImages.length,
                 itemBuilder: (context, index) => Image.asset(
                   controller.bannerImages[index],
@@ -117,32 +206,31 @@ class HomeView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Banner Indicators
           Obx(() => Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              controller.bannerImages.length,
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                height: 8,
-                width: controller.currentBannerPage.value == index ? 24 : 8,
-                decoration: BoxDecoration(
-                  color: controller.currentBannerPage.value == index
-                      ? const Color(0xFF73090D)
-                      : Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(4),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  controller.bannerImages.length,
+                  (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    height: 8,
+                    width: controller.currentBannerPage.value == index
+                        ? 24
+                        : 8,
+                    decoration: BoxDecoration(
+                      color: controller.currentBannerPage.value == index
+                          ? const Color(0xFF73090D)
+                          : Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          )),
+              )),
           const SizedBox(height: 24),
-
-          // Header Section
           const Text(
             "Perjalanan Sejarah Indonesia",
             style: TextStyle(
-              fontSize: 22, 
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: Color(0xFF73090D),
             ),
@@ -151,33 +239,29 @@ class HomeView extends StatelessWidget {
           const Text(
             "Selesaikan setiap era untuk membuka era berikutnya!",
             style: TextStyle(
-              fontSize: 13, 
+              fontSize: 13,
               color: Color.fromARGB(255, 0, 0, 0),
             ),
           ),
           const SizedBox(height: 20),
-
-          // Journey List
           Obx(() => ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: controller.quizList.length,
-            itemBuilder: (context, index) {
-              final item = controller.quizList[index];
-              final quizId = item['id'].toString();
-              
-              // MENGGUNAKAN LOGIKA BACKEND UNTUK LOCK STATUS
-              final isLocked = !controller.isUnlocked(item['order_number'] ?? 1);
-              
-              return _journeyCard(
-                controller: controller,
-                item: item,
-                quizId: quizId,
-                isLocked: isLocked,
-                index: index,
-              );
-            },
-          )),
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: controller.quizList.length,
+                itemBuilder: (context, index) {
+                  final item = controller.quizList[index];
+                  final quizId = item['id'].toString();
+                  final isLocked =
+                      !controller.isUnlocked(item['order_number'] ?? 1);
+                  return _journeyCard(
+                    controller: controller,
+                    item: item,
+                    quizId: quizId,
+                    isLocked: isLocked,
+                    index: index,
+                  );
+                },
+              )),
           const SizedBox(height: 100),
         ],
       ),
@@ -191,13 +275,16 @@ class HomeView extends StatelessWidget {
     required bool isLocked,
     required int index,
   }) {
-    // Fungsi untuk mendapatkan judul era berdasarkan order_number
     String getEraTitle(int orderNumber) {
       switch (orderNumber) {
-        case 1: return 'Era Prakasa';
-        case 2: return 'Era Kerajaan Hindu Budha';
-        case 3: return 'Era Kerajaan Islam';
-        default: return item['title'] ?? 'Quiz Title';
+        case 1:
+          return 'Era Prakasa';
+        case 2:
+          return 'Era Kerajaan Hindu Budha';
+        case 3:
+          return 'Era Kerajaan Islam';
+        default:
+          return item['title'] ?? 'Quiz Title';
       }
     }
 
@@ -219,7 +306,6 @@ class HomeView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Bagian Gambar dengan overlay lock
             Stack(
               children: [
                 ClipRRect(
@@ -235,7 +321,8 @@ class HomeView extends StatelessWidget {
                             0.2126, 0.7152, 0.0722, 0, 0,
                             0, 0, 0, 1, 0,
                           ])
-                        : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+                        : const ColorFilter.mode(
+                            Colors.transparent, BlendMode.multiply),
                     child: Image.asset(
                       item['image'] ?? 'assets/gambar/default.jpg',
                       height: 180,
@@ -245,12 +332,12 @@ class HomeView extends StatelessWidget {
                         height: 180,
                         width: double.infinity,
                         color: Colors.grey.shade300,
-                        child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                        child: const Icon(Icons.image_not_supported,
+                            size: 50, color: Colors.grey),
                       ),
                     ),
                   ),
                 ),
-                // Overlay lock icon jika terkunci
                 if (isLocked)
                   Container(
                     height: 180,
@@ -263,19 +350,16 @@ class HomeView extends StatelessWidget {
                       ),
                     ),
                     child: const Center(
-                      child: Icon(
-                        Icons.lock_outline,
-                        color: Colors.white,
-                        size: 48,
-                      ),
+                      child: Icon(Icons.lock_outline,
+                          color: Colors.white, size: 48),
                     ),
                   ),
-                // Badge Era di pojok kiri atas
                 Positioned(
                   top: 12,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFF73090D), Color(0xFFA0151A)],
@@ -303,7 +387,6 @@ class HomeView extends StatelessWidget {
                 ),
               ],
             ),
-            // Bagian konten bawah (title + 5 pertanyaan)
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -314,7 +397,8 @@ class HomeView extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: isLocked ? Colors.grey.shade600 : Colors.black87,
+                      color:
+                          isLocked ? Colors.grey.shade600 : Colors.black87,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -324,7 +408,9 @@ class HomeView extends StatelessWidget {
                     '5 Pertanyaan',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isLocked ? Colors.grey.shade400 : Colors.grey.shade600,
+                      color: isLocked
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

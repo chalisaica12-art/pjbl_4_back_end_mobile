@@ -2,6 +2,8 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../data/models/avatar_model.dart';
+import '../../home/controllers/home_controller.dart';
+import '../../leaderboard/controllers/leaderboard_controller.dart';
 
 class ProfileController extends GetxController {
   final supabase = Supabase.instance.client;
@@ -15,8 +17,8 @@ class ProfileController extends GetxController {
   var maxXP = 1000.obs;
   var levelTitle = "Pemula".obs;
   var userStars = 0.obs;
-  var activeAvatarId = 1.obs;
-  var unlockedAvatarIds = <int>[1].obs;
+  var activeAvatarId = Rx<int?>(null);  // ✅ BISA NULL
+  var unlockedAvatarIds = <int>[].obs;
   var avatars = <AvatarModel>[].obs;
   var isLoading = true.obs;
 
@@ -43,11 +45,16 @@ class ProfileController extends GetxController {
       userLevel.value = response['level'] ?? 1;
       currentXP.value = response['xp'] ?? 0;
       userStars.value = response['stars'] ?? 0;
-      activeAvatarId.value = response['active_avatar_id'] ?? 1;
-
+      
+      // ✅ ACTIVE_AVATAR_ID BISA NULL
+      activeAvatarId.value = response['active_avatar_id'] as int?;
+      
+      // ✅ UNLOCKED_AVATAR_IDS
       final unlockedList = response['unlocked_avatar_ids'];
       if (unlockedList != null) {
         unlockedAvatarIds.value = List<int>.from(unlockedList);
+      } else {
+        unlockedAvatarIds.value = [];
       }
 
       maxXP.value = 1000 + (userLevel.value - 1) * 500;
@@ -72,7 +79,7 @@ class ProfileController extends GetxController {
       final response = await supabase
           .from('avatars')
           .select()
-          .order('price_stars', ascending: true); // ✅ urut dari termurah
+          .order('price_stars', ascending: true);
       avatars.value = (response as List)
           .map((e) => AvatarModel.fromJson(e))
           .toList();
@@ -91,9 +98,14 @@ class ProfileController extends GetxController {
     return ((currentXP.value / maxXP.value) * 100).toInt();
   }
 
+  // ✅ GET AVATAR IMAGE (NULL/0 = TIDAK ADA AVATAR)
   String get activeAvatarImage {
-    final avatar = avatars.firstWhereOrNull((a) => a.id == activeAvatarId.value);
-    return avatar?.imagePath ?? "assets/gambar/gam1.png";
+    final avatarId = activeAvatarId.value;
+    if (avatarId == null || avatarId == 0) {
+      return ''; // KOSONG, TAMPIL INISIAL
+    }
+    final avatar = avatars.firstWhereOrNull((a) => a.id == avatarId);
+    return avatar?.imagePath ?? '';
   }
 
   String getAvatarName(int id) {
@@ -132,11 +144,23 @@ class ProfileController extends GetxController {
       activeAvatarId.value = avatarId;
       await supabase.from('profiles')
           .update({'active_avatar_id': avatarId}).eq('id', userId!);
+
+      // ✅ Sync ke HomeController
+      if (Get.isRegistered<HomeController>()) {
+        await Get.find<HomeController>().fetchUserProfile();
+      }
+      
+      // ✅ Refresh leaderboard biar avatar langsung muncul
+      if (Get.isRegistered<LeaderboardController>()) {
+        Get.find<LeaderboardController>().fetchLeaderboard();
+      }
+
+      Get.back(); // Tutup toko avatar
       Get.snackbar(
         "Sukses",
         "Avatar ${getAvatarName(avatarId)} aktif!",
         backgroundColor: const Color(0xFFFDE7E4),
-        colorText: const Color.fromARGB(255, 0, 0, 0),
+        colorText: Colors.black,
       );
     }
   }

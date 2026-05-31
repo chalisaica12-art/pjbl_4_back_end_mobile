@@ -7,7 +7,7 @@ class QuizDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<QuizDetailController>();
+    final controller = Get.put(QuizDetailController());
     final quizData = Get.arguments as Map<String, dynamic>;
 
     return Scaffold(
@@ -25,19 +25,68 @@ class QuizDetailView extends StatelessWidget {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Get.back(),
+          onPressed: () {
+            // ✅ LANGSUNG KE HOME (TIDAK PAKAI Get.back)
+            Get.offAllNamed('/home');
+          },
         ),
       ),
       body: Column(
         children: [
-          // Expanded area untuk list Unit & Materi (scrollable)
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Daftar Bab (Unit & Materi)
+                  // Info login banner (kalau belum login)
+                  Obx(() {
+                    if (!controller.isLoggedIn.value) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF73090D).withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: const Color(0xFF73090D).withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline,
+                                color: Color(0xFF73090D), size: 20),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                'Login untuk membuka semua materi & simpan progres',
+                                style: TextStyle(
+                                    fontSize: 12, color: Color(0xFF73090D)),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => Get.toNamed('/login'),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF73090D),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text('Login',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            )
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }),
+
                   const Text(
                     'Unit & Materi',
                     style: TextStyle(
@@ -47,29 +96,38 @@ class QuizDetailView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 15),
+
+                  // List chapter dengan pengecekan login dari controller
                   Obx(() => ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: controller.chapters.length,
-                    itemBuilder: (context, index) {
-                      final chapter = controller.chapters[index];
-                      bool canAccess = _isChapterAccessible(controller, index);
-                      return _buildChapterCard(
-                        title: chapter['title'],
-                        isCompleted: chapter['completed'],
-                        isLocked: !canAccess,
-                        onTap: canAccess ? () {
-                          controller.startQuiz(chapter['title']);
-                        } : null,
-                      );
-                    },
-                  )),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: controller.chapters.length,
+                        itemBuilder: (context, index) {
+                          final chapter = controller.chapters[index];
+                          final bool canAccess =
+                              controller.isChapterAccessible(index);
+                          final bool isCompleted =
+                              chapter['completed'] == true;
+
+                          return _buildChapterCard(
+                            index: index,
+                            title: chapter['title'],
+                            isCompleted: isCompleted,
+                            isLocked: !canAccess,
+                            needsLogin: index > 0 &&
+                                !controller.isLoggedIn.value,
+                            onTap: () {
+                              controller.startQuiz(chapter['title'], index);
+                            },
+                          );
+                        },
+                      )),
                 ],
               ),
             ),
           ),
-          
-          // Tombol Lanjutkan (tetap di bawah, naik sedikit)
+
+          // Tombol Lanjutkan di bawah
           Container(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
             decoration: BoxDecoration(
@@ -89,22 +147,36 @@ class QuizDetailView extends StatelessWidget {
     );
   }
 
-  // Fungsi untuk mengecek apakah bab bisa diakses
-  bool _isChapterAccessible(QuizDetailController controller, int index) {
-    final chapters = controller.chapters;
-    
-    if (index == 0) return true;
-    
-    final previousChapter = chapters[index - 1];
-    return previousChapter['completed'] == true;
-  }
-
   Widget _buildChapterCard({
+    required int index,
     required String title,
     required bool isCompleted,
     required bool isLocked,
-    VoidCallback? onTap,
+    required bool needsLogin,
+    required VoidCallback onTap,
   }) {
+    IconData leadingIcon;
+    Color leadingColor;
+    Color bgColor;
+
+    if (isCompleted) {
+      leadingIcon = Icons.check_circle;
+      leadingColor = Colors.green;
+      bgColor = const Color(0xFF73090D).withOpacity(0.1);
+    } else if (needsLogin) {
+      leadingIcon = Icons.lock_outline;
+      leadingColor = const Color(0xFF73090D);
+      bgColor = Colors.grey.shade100;
+    } else if (isLocked) {
+      leadingIcon = Icons.lock_outline;
+      leadingColor = Colors.grey;
+      bgColor = Colors.grey.shade100;
+    } else {
+      leadingIcon = Icons.lock_open_outlined;
+      leadingColor = const Color(0xFF73090D);
+      bgColor = Colors.grey.shade100;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -124,57 +196,53 @@ class QuizDetailView extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: isCompleted
-                ? const Color(0xFF73090D).withOpacity(0.1)
-                : Colors.grey.shade100,
+            color: bgColor,
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            isLocked == true
-                ? Icons.lock_outline
-                : (isCompleted == true 
-                    ? Icons.check_circle 
-                    : Icons.lock_open_outlined), // Gembok terbuka, bukan play video
-            color: isLocked == true
-                ? Colors.grey
-                : (isCompleted == true ? Colors.green : const Color(0xFF73090D)),
-            size: 24,
-          ),
+          child: Icon(leadingIcon, color: leadingColor, size: 24),
         ),
         title: Text(
           title,
           style: TextStyle(
-            fontWeight: isCompleted == true ? FontWeight.w600 : FontWeight.normal,
-            color: isLocked == true ? Colors.grey : Colors.black87,
+            fontWeight: isCompleted ? FontWeight.w600 : FontWeight.normal,
+            color: isLocked && !needsLogin ? Colors.grey : Colors.black87,
           ),
         ),
-        trailing: isCompleted == true
+        subtitle: needsLogin && !isCompleted
+            ? const Text(
+                'Login untuk membuka',
+                style: TextStyle(fontSize: 11, color: Color(0xFF73090D)),
+              )
+            : null,
+        trailing: isCompleted
             ? const Icon(Icons.check_circle, color: Colors.green, size: 20)
-            : (isLocked == true 
+            : (isLocked && !needsLogin
                 ? const Icon(Icons.lock, color: Colors.grey, size: 18)
-                : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey)),
+                : const Icon(Icons.arrow_forward_ios,
+                    size: 16, color: Colors.grey)),
       ),
     );
   }
 
   Widget _buildContinueButton(QuizDetailController controller) {
-    // Cari bab pertama yang belum selesai dan bisa diakses
-    dynamic nextChapter;
+    int? nextIndex;
     for (int i = 0; i < controller.chapters.length; i++) {
       final chapter = controller.chapters[i];
-      final canAccess = _isChapterAccessible(controller, i);
+      final canAccess = controller.isChapterAccessible(i);
       if (chapter['completed'] == false && canAccess) {
-        nextChapter = chapter;
+        nextIndex = i;
         break;
       }
     }
-    
-    if (nextChapter == null) {
+
+    if (nextIndex == null) {
       return SizedBox(
         width: double.infinity,
         child: ElevatedButton(
           onPressed: () {
-            Get.snackbar('Selamat!', 'Kamu sudah menyelesaikan semua materi!');
+            Get.snackbar('Selamat!', 'Kamu sudah menyelesaikan semua materi!',
+                backgroundColor: Colors.green,
+                colorText: Colors.white);
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
@@ -186,17 +254,46 @@ class QuizDetailView extends StatelessWidget {
           ),
           child: const Text(
             '🎉 SELESAI SEMUA 🎉',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white),
           ),
         ),
       );
     }
-    
+
+    final nextChapter = controller.chapters[nextIndex];
+
+    if (nextIndex > 0 && !controller.isLoggedIn.value) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () => Get.toNamed('/login'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF73090D),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: const Text(
+            '🔒 LOGIN UNTUK LANJUTKAN',
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white),
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
-          controller.startQuiz(nextChapter['title']);
+          controller.startQuiz(nextChapter['title'], nextIndex!);
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF73090D),
@@ -208,7 +305,10 @@ class QuizDetailView extends StatelessWidget {
         ),
         child: const Text(
           'LANJUTKAN BELAJAR',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.white),
         ),
       ),
     );

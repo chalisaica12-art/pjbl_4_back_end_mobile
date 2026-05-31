@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../profile/controllers/profile_controller.dart';
 
 class HomeController extends GetxController {
   final supabase = Supabase.instance.client;
@@ -11,7 +12,7 @@ class HomeController extends GetxController {
   final isLoading = true.obs;
   final currentBannerPage = 0.obs;
   final selectedIndex = 0.obs;
-  final userName = 'Guest'.obs;
+  final userName = 'Tamu'.obs;
   final userAvatar = ''.obs;
 
   final pageController = PageController();
@@ -23,12 +24,23 @@ class HomeController extends GetxController {
   ];
 
   String? get currentUserId => supabase.auth.currentUser?.id;
+  bool get isGuest => currentUserId == null;
 
   @override
   void onInit() {
     super.onInit();
     fetchQuizzes();
     fetchUserProfile();
+
+    // ✅ Sync avatar dari ProfileController kalau sudah ada
+    if (Get.isRegistered<ProfileController>()) {
+      final profileCtrl = Get.find<ProfileController>();
+      ever(profileCtrl.activeAvatarId, (_) {
+        userAvatar.value = profileCtrl.activeAvatarImage;
+      });
+      // Langsung sync sekarang juga
+      userAvatar.value = profileCtrl.activeAvatarImage;
+    }
   }
 
   Future<void> fetchUserProfile() async {
@@ -36,11 +48,31 @@ class HomeController extends GetxController {
     try {
       final response = await supabase
           .from('profiles')
-          .select('name, avatar_url')
+          .select('name, active_avatar_id')
           .eq('id', currentUserId!)
           .single();
-      userName.value = response['name'] ?? 'Guest';
-      userAvatar.value = response['avatar_url'] ?? '';
+
+      userName.value = response['name'] ?? 'Tamu';
+
+      // ✅ Pastikan ProfileController ada, kalau tidak buat dulu
+      if (!Get.isRegistered<ProfileController>()) {
+        Get.put(ProfileController());
+      }
+      final profileCtrl = Get.find<ProfileController>();
+
+      // Tunggu avatars selesai load
+      int retry = 0;
+      while (profileCtrl.avatars.isEmpty && retry < 10) {
+        await Future.delayed(const Duration(milliseconds: 200));
+        retry++;
+      }
+
+      userAvatar.value = profileCtrl.activeAvatarImage;
+
+      // ✅ Pasang listener setelah ProfileController pasti ada
+      ever(profileCtrl.activeAvatarId, (_) {
+        userAvatar.value = profileCtrl.activeAvatarImage;
+      });
     } catch (e) {
       print('Error fetching profile: $e');
     }
@@ -55,24 +87,25 @@ class HomeController extends GetxController {
           .eq('category', 'journey')
           .order('order_number', ascending: true);
 
-      // Ambil data mentah dari database
       final rawQuizzes = List<Map<String, dynamic>>.from(response);
 
-      // BACKEND FILTER: Membatasi hanya Era 1, 2, dan 3 yang lolos ke View
       final filteredQuizzes = rawQuizzes.where((quiz) {
         final orderNum = quiz['order_number'] as int? ?? 0;
         return orderNum == 1 || orderNum == 2 || orderNum == 3;
       }).toList();
 
-      // Masukkan hasil saringan ke list kuis utama
       quizList.value = filteredQuizzes;
 
-      // Init like counts
+      for (var quiz in filteredQuizzes) {
+        print('=== Era ${quiz['order_number']} ===');
+        print('image value: "${quiz['image']}"');
+        print('image type: ${quiz['image'].runtimeType}');
+      }
+
       for (var quiz in quizList) {
         likeCounts[quiz['id'].toString()] = (quiz['rating'] as num).toInt();
       }
 
-      // Fetch likes user kalau sudah login
       if (currentUserId != null) {
         final likes = await supabase
             .from('quiz_likes')
@@ -93,20 +126,23 @@ class HomeController extends GetxController {
     if (currentUserId == null) {
       Get.dialog(
         AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Login Required'),
           content: const Text('Please login to like this quiz'),
           actions: [
             TextButton(
               onPressed: () => Get.back(),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () {
                 Get.back();
                 Get.toNamed('/login');
               },
-              child: const Text('Login', style: TextStyle(color: Color(0xFF73090D))),
+              child: const Text('Login',
+                  style: TextStyle(color: Color(0xFF73090D))),
             ),
           ],
         ),
@@ -128,8 +164,7 @@ class HomeController extends GetxController {
         likeCounts[quizId] = currentCount - 1;
         await supabase
             .from('quizzes')
-            .update({'rating': currentCount - 1})
-            .eq('id', quizId);
+            .update({'rating': currentCount - 1}).eq('id', quizId);
       } else {
         await supabase.from('quiz_likes').insert({
           'quiz_id': quizId,
@@ -139,8 +174,7 @@ class HomeController extends GetxController {
         likeCounts[quizId] = currentCount + 1;
         await supabase
             .from('quizzes')
-            .update({'rating': currentCount + 1})
-            .eq('id', quizId);
+            .update({'rating': currentCount + 1}).eq('id', quizId);
       }
       likedItems.refresh();
       likeCounts.refresh();
@@ -150,17 +184,43 @@ class HomeController extends GetxController {
   }
 
   bool isUnlocked(int orderNumber) {
-    // Era 1 (Prakasa) otomatis terbuka selalu
     if (orderNumber == 1) return true;
-    
-    // Logika tambahan unlock bertahap bisa diaktifkan di sini nanti
+    if (isGuest) return false;
     return false;
   }
 
   void onQuizTap(Map<String, dynamic> quiz) {
     final orderNum = quiz['order_number'] as int? ?? 1;
-    final isLocked = !isUnlocked(orderNum); 
-    
+    final isLocked = !isUnlocked(orderNum);
+
+    if (isLocked && orderNum > 1 && isGuest) {
+      Get.dialog(
+        AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Login Diperlukan'),
+          content: const Text(
+              'Kamu harus login untuk memainkan era ini dan menyimpan skor!'),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child:
+                  const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                Get.back();
+                Get.toNamed('/login');
+              },
+              child: const Text('Login',
+                  style: TextStyle(color: Color(0xFF73090D))),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     if (isLocked) {
       Get.snackbar(
         '',
@@ -170,35 +230,13 @@ class HomeController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
         margin: EdgeInsets.zero,
         borderRadius: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
         duration: const Duration(seconds: 2),
       );
       return;
     }
-    
-    if (currentUserId == null) {
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Login Required'),
-          content: const Text('Please login to play this quiz'),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () {
-                Get.back();
-                Get.toNamed('/login');
-              },
-              child: const Text('Login', style: TextStyle(color: Color(0xFF73090D))),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
+
     Get.toNamed('/quiz-detail', arguments: quiz);
   }
 
@@ -211,6 +249,32 @@ class HomeController extends GetxController {
         Get.toNamed('/leaderboard');
         break;
       case 2:
+        if (isGuest) {
+          Get.dialog(
+            AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: const Text('Login Diperlukan'),
+              content: const Text('Kamu harus login untuk melihat profil!'),
+              actions: [
+                TextButton(
+                  onPressed: () => Get.back(),
+                  child: const Text('Batal',
+                      style: TextStyle(color: Colors.grey)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Get.back();
+                    Get.toNamed('/login');
+                  },
+                  child: const Text('Login',
+                      style: TextStyle(color: Color(0xFF73090D))),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
         Get.toNamed('/profile');
         break;
     }

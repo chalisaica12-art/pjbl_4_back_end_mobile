@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../routes/app_pages.dart';
 
 class SplashController extends GetxController
@@ -39,8 +40,8 @@ class SplashController extends GetxController
     animationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         Future.delayed(const Duration(milliseconds: 500), () {
-          // LANGSUNG KE HALAMAN LOGIN
-          Get.offAllNamed(Routes.LOGIN);
+          // ✅ Cek session — kalau sudah login langsung ke home, kalau belum juga ke home (sebagai guest)
+          Get.offAllNamed(Routes.HOME);
         });
       }
     });

@@ -42,16 +42,14 @@ class RegisterController extends GetxController {
     );
   }
 
-  // Validasi step 1 lalu pindah ke step 2
- void handleNext() {
-  if (nameController.text.isEmpty || phoneController.text.isEmpty) {
-    _showSnackbar('Mohon lengkapi semua kolom', const Color(0xff73090D));
-    return;
+  void handleNext() {
+    if (nameController.text.isEmpty || phoneController.text.isEmpty) {
+      _showSnackbar('Mohon lengkapi semua kolom', const Color(0xff73090D));
+      return;
+    }
+    Get.toNamed('/register-step2');
   }
-  Get.toNamed('/register-step2');
-}
 
-  // Proses register di step 2
   Future<void> handleRegister() async {
     if (!isAgreed.value) {
       _showSnackbar('Harap setujui kebijakan privasi', const Color(0xff73090D));
@@ -65,7 +63,6 @@ class RegisterController extends GetxController {
       return;
     }
 
-    // Validasi format email
     if (!GetUtils.isEmail(emailController.text.trim())) {
       _showSnackbar('Masukkan alamat email yang valid', const Color(0xff73090D));
       return;
@@ -90,21 +87,32 @@ class RegisterController extends GetxController {
       );
 
       if (response.user != null) {
-        await supabase.from('profiles').insert({
+        // ✅ INSERT KE PROFILES DENGAN AVATAR KOSONG (NULL)
+        await supabase.from('profiles').upsert({
           'id': response.user!.id,
           'name': nameController.text.trim(),
-          'username': usernameController.text.trim(),
           'email': emailController.text.trim(),
           'phone': phoneController.text.trim(),
-        });
+          'username': usernameController.text.trim().isEmpty 
+              ? nameController.text.trim() 
+              : usernameController.text.trim(),
+          'stars': 0,
+          'level': 1,
+          'xp': 0,
+          'active_avatar_id': null,  // ✅ KOSONG! TIDAK PAKAI AVATAR DEFAULT
+          'unlocked_avatar_ids': [],  // ✅ BELUM PUNYA AVATAR APAPUN
+        }, onConflict: 'id');
 
-        _showSnackbar('Pendaftaran Berhasil! ✓', Colors.green);
+        _showSnackbar('Pendaftaran Berhasil', Colors.green);
         await Future.delayed(const Duration(milliseconds: 1500));
         Get.offAllNamed('/home');
+      } else {
+        _showSnackbar('Pendaftaran gagal, coba lagi', const Color(0xff73090D));
       }
     } on AuthException catch (e) {
       _showSnackbar(e.message, const Color(0xff73090D));
     } catch (e) {
+      print('ERROR: $e');
       _showSnackbar('Terjadi kesalahan', const Color(0xff73090D));
     } finally {
       isLoading.value = false;

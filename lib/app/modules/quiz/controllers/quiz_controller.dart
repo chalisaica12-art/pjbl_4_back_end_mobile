@@ -1,7 +1,10 @@
 import 'package:get/get.dart';
 import 'dart:async';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class QuizController extends GetxController {
+  final supabase = Supabase.instance.client;
+
   // Timer
   var seconds = 0.obs;
   var minutes = 0.obs;
@@ -18,7 +21,7 @@ class QuizController extends GetxController {
   final List<Map<String, dynamic>> questions = [
     {
       'question': 'Siapakah tokoh yang pertama kali menemukan fosil manusia purba Meganthropus Paleojavanicus?',
-      'image': null, // null = tidak ada gambar
+      'image': null,
       'options': [
         'Eugene Dubois',
         'G.H.R. von Koenigswald',
@@ -76,6 +79,9 @@ class QuizController extends GetxController {
   Map<String, dynamic> get currentQuestionData => questions[currentQuestion.value];
   int get totalQuestions => questions.length;
 
+  String? get currentUserId => supabase.auth.currentUser?.id;
+  bool get isGuest => currentUserId == null;
+
   @override
   void onInit() {
     super.onInit();
@@ -102,6 +108,71 @@ class QuizController extends GetxController {
     }
   }
 
+  // ✅ Hitung stars berdasarkan skor
+  int _hitungStars(int correct, int total) {
+    final persen = (correct / total) * 100;
+    if (persen >= 80) return 3;
+    if (persen >= 60) return 2;
+    if (persen >= 40) return 1;
+    return 0;
+  }
+
+  // ✅ Simpan score ke Supabase (hanya kalau sudah login)
+  Future<void> _simpanScore() async {
+    if (isGuest) return; // guest tidak disimpan
+
+    try {
+      final score = (correctAnswers.value * 100 ~/ totalQuestions);
+      final stars = _hitungStars(correctAnswers.value, totalQuestions);
+      final xpDapat = correctAnswers.value * 20; // 20 XP per jawaban benar
+
+      // Simpan ke tabel quiz_scores
+      await supabase.from('quiz_scores').insert({
+        'user_id': currentUserId,
+        'score': score,
+        'correct_answers': correctAnswers.value,
+        'total_questions': totalQuestions,
+        'duration_seconds': (minutes.value * 60) + seconds.value,
+        'stars_earned': stars,
+        'played_at': DateTime.now().toIso8601String(),
+      });
+
+      // Update stars dan XP di tabel profiles
+      final profileResponse = await supabase
+          .from('profiles')
+          .select('stars, xp, level')
+          .eq('id', currentUserId!)
+          .single();
+
+      final currentStars = profileResponse['stars'] ?? 0;
+      final currentXP = profileResponse['xp'] ?? 0;
+      final currentLevel = profileResponse['level'] ?? 1;
+
+      final newStars = currentStars + stars;
+      final newXP = currentXP + xpDapat;
+
+      // Hitung level up
+      int maxXP = 1000 + ((currentLevel as int) - 1) * 500;
+      int finalXP = newXP;
+      int finalLevel = currentLevel;
+
+      if (finalXP >= maxXP) {
+        finalLevel++;
+        finalXP = finalXP - maxXP;
+      }
+
+      await supabase.from('profiles').update({
+        'stars': newStars,
+        'xp': finalXP,
+        'level': finalLevel,
+      }).eq('id', currentUserId!);
+
+      print('Score tersimpan: score=$score, stars=$stars, xp=$xpDapat');
+    } catch (e) {
+      print('Error simpan score: $e');
+    }
+  }
+
   void cekJawaban() {
     if (selectedAnswer.value.isEmpty) return;
 
@@ -109,7 +180,7 @@ class QuizController extends GetxController {
     isCorrect.value = (selectedAnswer.value == currentQuestionData['answer']);
     if (isCorrect.value) correctAnswers.value++;
 
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 2), () async {
       if (currentQuestion.value < totalQuestions - 1) {
         currentQuestion.value++;
         selectedAnswer.value = '';
@@ -117,11 +188,16 @@ class QuizController extends GetxController {
         isCorrect.value = false;
       } else {
         _timer?.cancel();
+
+        // ✅ Simpan score dulu sebelum navigasi
+        await _simpanScore();
+
         Get.toNamed('/score', arguments: {
           'totalMinutes': minutes.value,
           'totalSeconds': seconds.value,
           'correctAnswers': correctAnswers.value,
           'totalQuestions': totalQuestions,
+          'isGuest': isGuest, // ✅ kirim info guest ke score view
         });
       }
     });
