@@ -12,7 +12,7 @@ class EditProfileController extends GetxController {
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
   var isLoading = false.obs;
-  var activeAvatarImage = ''.obs; // ✅ TAMBAHAN
+  var activeAvatarImage = ''.obs;
 
   @override
   void onInit() {
@@ -43,7 +43,7 @@ class EditProfileController extends GetxController {
         print("Profile not found for user: $userId");
       }
 
-      // ✅ TAMBAHAN: load avatar image dari ProfileController
+      // ✅ Load avatar image dari ProfileController
       if (Get.isRegistered<ProfileController>()) {
         activeAvatarImage.value = Get.find<ProfileController>().activeAvatarImage;
       }
@@ -52,6 +52,11 @@ class EditProfileController extends GetxController {
       Get.snackbar("Error", "Gagal memuat profil: $e",
           backgroundColor: Colors.red, colorText: Colors.white);
     }
+  }
+
+  // ✅ Fungsi untuk refresh avatar (dipanggil setelah ganti avatar)
+  Future<void> loadProfile() async {
+    await fetchProfile();
   }
 
   Future<void> saveProfile() async {
@@ -81,7 +86,7 @@ class EditProfileController extends GetxController {
         "Sukses",
         "Profil berhasil diperbarui!",
         backgroundColor: const Color(0xFFFDE7E4),
-        colorText: const Color.fromARGB(255, 0, 0, 0),
+        colorText: Colors.black,
       );
 
       await Get.offNamed('/profile');

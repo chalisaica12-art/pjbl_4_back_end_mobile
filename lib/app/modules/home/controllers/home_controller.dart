@@ -14,6 +14,7 @@ class HomeController extends GetxController {
   final selectedIndex = 0.obs;
   final userName = 'Tamu'.obs;
   final userAvatar = ''.obs;
+  final userStars = 0.obs;
 
   final pageController = PageController();
 
@@ -32,13 +33,11 @@ class HomeController extends GetxController {
     fetchQuizzes();
     fetchUserProfile();
 
-    // ✅ Sync avatar dari ProfileController kalau sudah ada
     if (Get.isRegistered<ProfileController>()) {
       final profileCtrl = Get.find<ProfileController>();
       ever(profileCtrl.activeAvatarId, (_) {
         userAvatar.value = profileCtrl.activeAvatarImage;
       });
-      // Langsung sync sekarang juga
       userAvatar.value = profileCtrl.activeAvatarImage;
     }
   }
@@ -48,19 +47,18 @@ class HomeController extends GetxController {
     try {
       final response = await supabase
           .from('profiles')
-          .select('name, active_avatar_id')
+          .select('name, active_avatar_id, stars')
           .eq('id', currentUserId!)
           .single();
 
       userName.value = response['name'] ?? 'Tamu';
+      userStars.value = response['stars'] ?? 0;
 
-      // ✅ Pastikan ProfileController ada, kalau tidak buat dulu
       if (!Get.isRegistered<ProfileController>()) {
         Get.put(ProfileController());
       }
       final profileCtrl = Get.find<ProfileController>();
 
-      // Tunggu avatars selesai load
       int retry = 0;
       while (profileCtrl.avatars.isEmpty && retry < 10) {
         await Future.delayed(const Duration(milliseconds: 200));
@@ -69,7 +67,6 @@ class HomeController extends GetxController {
 
       userAvatar.value = profileCtrl.activeAvatarImage;
 
-      // ✅ Pasang listener setelah ProfileController pasti ada
       ever(profileCtrl.activeAvatarId, (_) {
         userAvatar.value = profileCtrl.activeAvatarImage;
       });
@@ -221,18 +218,34 @@ class HomeController extends GetxController {
       return;
     }
 
+    // ✅ DIALOG UNTUK ERA TERKUNCI (bukan snackbar)
     if (isLocked) {
-      Get.snackbar(
-        '',
-        'Selesaikan kuis era sebelumnya terlebih dahulu!',
-        backgroundColor: const Color(0xFF73090D),
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-        margin: EdgeInsets.zero,
-        borderRadius: 0,
-        padding:
-            const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
-        duration: const Duration(seconds: 2),
+      Get.dialog(
+        AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Era Terkunci',
+            style: TextStyle(
+              color: Color(0xFF73090D),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Selesaikan era sebelumnya terlebih dahulu!',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text(
+                'OK',
+                style: TextStyle(color: Color(0xFF73090D)),
+              ),
+            ),
+          ],
+        ),
+        barrierDismissible: true,
       );
       return;
     }

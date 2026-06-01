@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/edit_profile_controller.dart';
+import '../../../data/models/avatar_model.dart';
+import '../../profile/controllers/profile_controller.dart';
 
 class EditProfileView extends StatelessWidget {
   const EditProfileView({super.key});
@@ -8,6 +10,7 @@ class EditProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<EditProfileController>();
+    final profileController = Get.find<ProfileController>();
     final screenHeight = MediaQuery.of(context).size.height;
     final appBarHeight = AppBar().preferredSize.height;
     final statusBarHeight = MediaQuery.of(context).padding.top;
@@ -52,38 +55,66 @@ class EditProfileView extends StatelessWidget {
                 ),
               ),
               child: Center(
-                // ✅ PERUBAHAN: ganti hardcode AssetImage → Obx baca activeAvatarImage
-                child: Obx(() {
-                  final avatarImage = controller.activeAvatarImage.value;
-                  return Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                    ),
-                    child: ClipOval(
-                      child: avatarImage.isEmpty
-                          ? Image.asset(
-                              "assets/gambar/gam1.png",
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.contain,
-                            )
-                          : avatarImage.startsWith('http')
-                              ? Image.network(
-                                  avatarImage,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    // Avatar
+                    Obx(() {
+                      final avatarImage = controller.activeAvatarImage.value;
+                      return Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 4),
+                        ),
+                        child: ClipOval(
+                          child: avatarImage.isEmpty
+                              ? Image.asset(
+                                  "assets/gambar/gam1.png",
                                   width: 100,
                                   height: 100,
                                   fit: BoxFit.contain,
                                 )
-                              : Image.asset(
-                                  avatarImage,
-                                  width: 100,
-                                  height: 100,
-                                  fit: BoxFit.contain,
-                                ),
+                              : avatarImage.startsWith('http')
+                                  ? Image.network(
+                                      avatarImage,
+                                      width: 100,
+                                      height: 100,
+                                      fit: BoxFit.contain,
+                                    )
+                                  : Image.asset(
+                                      avatarImage,
+                                      width: 100,
+                                      height: 100,
+                                      fit: BoxFit.contain,
+                                    ),
+                        ),
+                      );
+                    }),
+                    // ✅ ICON PENSIL DI POJOK KANAN BAWAH AVATAR (untuk inventaris)
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: GestureDetector(
+                        onTap: () => _showAvatarInventory(profileController, controller),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Color(0xFF8B0000),
+                          size: 18,
+                        ),
+                      ),
                     ),
-                  );
-                }),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 30),
@@ -144,6 +175,176 @@ class EditProfileView extends StatelessWidget {
           suffixIcon: suffixIcon,
         ),
       ),
+    );
+  }
+
+  // ✅ INVENTARIS AVATAR
+  void _showAvatarInventory(ProfileController profileController, EditProfileController editController) {
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.75,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(25),
+            topRight: Radius.circular(25),
+          ),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            Container(
+              width: 50,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              "Inventaris Avatar",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.amber,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.star, color: Colors.white, size: 18),
+                  const SizedBox(width: 4),
+                  Obx(() => Text(
+                    "${profileController.userStars.value} Bintang",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.white,
+                    ),
+                  )),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: Obx(() {
+                final ownedAvatars = profileController.avatars
+                    .where((a) => profileController.unlockedAvatarIds.contains(a.id))
+                    .toList();
+
+                if (ownedAvatars.isEmpty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.sentiment_dissatisfied, size: 50, color: Colors.grey),
+                        SizedBox(height: 10),
+                        Text('Belum punya avatar', style: TextStyle(color: Colors.grey)),
+                        Text('Buka Toko Avatar untuk membeli', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                  );
+                }
+
+                return GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.75,
+                  ),
+                  itemCount: ownedAvatars.length,
+                  itemBuilder: (context, index) {
+                    final avatar = ownedAvatars[index];
+                    final isActive = profileController.activeAvatarId.value == avatar.id;
+
+                    return GestureDetector(
+                      onTap: () async {
+                        await profileController.useAvatar(avatar.id);
+                        await editController.loadProfile();
+                        Get.back();
+                        Get.snackbar(
+                          'Sukses',
+                          'Avatar ${avatar.name} aktif!',
+                          backgroundColor: Colors.green,
+                          colorText: Colors.white,
+                        );
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(16),
+                          border: isActive
+                              ? Border.all(color: Colors.green, width: 3)
+                              : Border.all(color: Colors.grey.shade200, width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 5,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: const BoxDecoration(shape: BoxShape.circle),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      avatar.imagePath,
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                                if (isActive)
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.3),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Center(
+                                      child: Icon(Icons.check_circle, color: Colors.white, size: 30),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              avatar.name,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                                color: isActive ? Colors.green : Colors.black87,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
     );
   }
 }

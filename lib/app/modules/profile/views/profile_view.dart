@@ -5,6 +5,7 @@ import '../../../widgets/custom_bottom_navbar.dart';
 import '../../../data/models/avatar_model.dart';
 import '../../home/controllers/home_controller.dart';
 import '../../leaderboard/controllers/leaderboard_controller.dart';
+import '../../edit_profile/controllers/edit_profile_controller.dart'; // ✅ TAMBAHKAN
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
@@ -41,245 +42,276 @@ class ProfileView extends GetView<ProfileController> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.white),
-            onPressed: () => Get.snackbar("Info", "Pengaturan"),
+            onPressed: () {},
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              height: redSectionHeight,
-              decoration: const BoxDecoration(
-                color: Color(0xFF8B0000),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
+      body: RefreshIndicator(
+        onRefresh: () => controller.fetchProfile(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                height: redSectionHeight,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF8B0000),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
                 ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // ✅ AVATAR DENGAN INISIAL KALAU KOSONG
-                    Obx(() => Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 4),
-                          ),
-                          child: ClipOval(
-                            child: controller.activeAvatarImage.isEmpty
-                                ? CircleAvatar(
-                                    radius: 50,
-                                    backgroundColor: const Color(0xFFD32F2F),
-                                    child: Text(
-                                      controller.userName.value.isNotEmpty
-                                          ? controller.userName.value[0].toUpperCase()
-                                          : '?',
-                                      style: const TextStyle(
-                                        fontSize: 40,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  )
-                                : (controller.activeAvatarImage.startsWith('http')
-                                    ? Image.network(
-                                        controller.activeAvatarImage,
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.asset(
-                                        controller.activeAvatarImage,
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                      )),
-                          ),
-                        )),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // ✅ AVATAR DENGAN BORDER PUTIH + ICON PENSIL DI POJOK KANAN BAWAH
+                      Obx(() => Stack(
+                        alignment: Alignment.bottomRight,
                         children: [
-                          Obx(() => Text(
-                                controller.userName.value.isEmpty
-                                    ? 'Guest'
-                                    : controller.userName.value,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold),
-                              )),
-                          const SizedBox(height: 8),
-                          Obx(() => Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.star,
-                                        color: Colors.white, size: 16),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      "${controller.userStars.value} Skor",
-                                      style: const TextStyle(
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 4),
+                            ),
+                            child: ClipOval(
+                              child: controller.activeAvatarImage.isEmpty
+                                  ? CircleAvatar(
+                                      radius: 50,
+                                      backgroundColor: const Color(0xFFD32F2F),
+                                      child: Text(
+                                        controller.userName.value.isNotEmpty
+                                            ? controller.userName.value[0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          fontSize: 40,
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                              )),
-                          const SizedBox(height: 14),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final result =
-                                  await Get.toNamed('/edit-profile');
-                              if (result == true) {
-                                await controller.fetchProfile();
-                                if (Get.isRegistered<HomeController>()) {
-                                  await Get.find<HomeController>()
-                                      .fetchUserProfile();
-                                }
-                                if (Get.isRegistered<LeaderboardController>()) {
-                                  await Get.find<LeaderboardController>()
-                                      .fetchLeaderboard();
-                                }
-                                Get.snackbar(
-                                    "Sukses", "Profil berhasil diperbarui",
-                                    backgroundColor: Colors.green,
-                                    colorText: Colors.white);
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFD32F2F),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                                        ),
+                                      ),
+                                    )
+                                  : (controller.activeAvatarImage.startsWith('http')
+                                      ? Image.network(
+                                          controller.activeAvatarImage,
+                                          width: 100,
+                                          height: 100,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Image.asset(
+                                          controller.activeAvatarImage,
+                                          width: 100,
+                                          height: 100,
+                                          fit: BoxFit.cover,
+                                        )),
                             ),
-                            child: const Text(
-                              "Edit Profile",
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600),
+                          ),
+                          // ✅ ICON PENSIL DI POJOK KANAN BAWAH AVATAR
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: GestureDetector(
+                              onTap: () => Get.toNamed('/edit-profile'),
+                              child: const Icon(
+                                Icons.edit,
+                                color: Color(0xFF8B0000),
+                                size: 18,
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF8B0000), Color(0xFFD32F2F)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Obx(() => Row(
+                      )),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.star,
-                                color: Colors.amber, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Level ${controller.userLevel.value} - ${controller.levelTitle.value}",
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
+                            Obx(() => Text(
+                                  controller.userName.value.isEmpty
+                                      ? 'Guest'
+                                      : controller.userName.value,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold),
+                                )),
+                            const SizedBox(height: 8),
+                            // ✅ BINTANG
+                            Obx(() => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.star,
+                                          color: Colors.white, size: 16),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        "${controller.userStars.value} Bintang",
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                            const SizedBox(height: 14),
+                            ElevatedButton(
+                              onPressed: () async {
+                                final result =
+                                    await Get.toNamed('/edit-profile');
+                                if (result == true) {
+                                  await controller.fetchProfile();
+                                  if (Get.isRegistered<HomeController>()) {
+                                    await Get.find<HomeController>()
+                                        .fetchUserProfile();
+                                  }
+                                  if (Get.isRegistered<LeaderboardController>()) {
+                                    await Get.find<LeaderboardController>()
+                                        .fetchLeaderboard();
+                                  }
+                                  Get.snackbar(
+                                      "Sukses", "Profil berhasil diperbarui",
+                                      backgroundColor: Colors.green,
+                                      colorText: Colors.white);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFD32F2F),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                              child: const Text(
+                                "Edit Profile",
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600),
+                              ),
                             ),
                           ],
-                        )),
-                    const SizedBox(height: 12),
-                    Obx(() => Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text("XP",
-                                style:
-                                    TextStyle(color: Colors.white70)),
-                            Text(
-                                "${controller.currentXP.value} / ${controller.maxXP.value} XP",
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8B0000), Color(0xFFD32F2F)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Obx(() => Row(
+                            children: [
+                              const Icon(Icons.star,
+                                  color: Colors.amber, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Level ${controller.userLevel.value} - ${controller.levelTitle.value}",
                                 style: const TextStyle(
-                                    color: Colors.white)),
-                          ],
-                        )),
-                    const SizedBox(height: 8),
-                    Obx(() => ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: LinearProgressIndicator(
-                            value: controller.xpProgress,
-                            backgroundColor: Colors.white30,
-                            valueColor: const AlwaysStoppedAnimation(
-                                Colors.amber),
-                            minHeight: 8,
-                          ),
-                        )),
-                    const SizedBox(height: 8),
-                    Obx(() => Text(
-                          "${controller.xpPercentage}% to Level ${controller.userLevel.value + 1}",
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 11),
-                        )),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          )),
+                      const SizedBox(height: 12),
+                      Obx(() => Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("XP",
+                                  style:
+                                      TextStyle(color: Colors.white70)),
+                              Text(
+                                  "${controller.currentXP.value} / ${controller.maxXP.value} XP",
+                                  style: const TextStyle(
+                                      color: Colors.white)),
+                            ],
+                          )),
+                      const SizedBox(height: 8),
+                      Obx(() => ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: controller.xpProgress,
+                              backgroundColor: Colors.white30,
+                              valueColor: const AlwaysStoppedAnimation(
+                                  Colors.amber),
+                              minHeight: 8,
+                            ),
+                          )),
+                      const SizedBox(height: 8),
+                      Obx(() => Text(
+                            "${controller.xpPercentage}% to Level ${controller.userLevel.value + 1}",
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 11),
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    _buildMenuItem(
+                        icon: Icons.language,
+                        title: "Bahasa",
+                        onTap: () {}),
+                    const Divider(color: Colors.black12, height: 1),
+                    _buildMenuItem(
+                        icon: Icons.notifications_outlined,
+                        title: "Notifikasi",
+                        onTap: () {}),
+                    const Divider(color: Colors.black12, height: 1),
+                    _buildMenuItem(
+                        icon: Icons.shopping_bag_outlined,
+                        title: "Toko Avatar",
+                        onTap: () => _showAvatarShop()),
+                    const Divider(color: Colors.black12, height: 1),
+                    _buildMenuItem(
+                        icon: Icons.logout,
+                        title: "Keluar",
+                        onTap: () => _showLogoutDialog()),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  _buildMenuItem(
-                      icon: Icons.language,
-                      title: "Bahasa",
-                      onTap: () =>
-                          Get.snackbar("Bahasa", "Pilih bahasa")),
-                  const Divider(color: Colors.black12, height: 1),
-                  _buildMenuItem(
-                      icon: Icons.notifications_outlined,
-                      title: "Notifikasi",
-                      onTap: () => Get.snackbar(
-                          "Notifikasi", "Pengaturan notifikasi")),
-                  const Divider(color: Colors.black12, height: 1),
-                  _buildMenuItem(
-                      icon: Icons.shopping_bag_outlined,
-                      title: "Toko Avatar",
-                      onTap: () => _showAvatarShop()),
-                  const Divider(color: Colors.black12, height: 1),
-                  _buildMenuItem(
-                      icon: Icons.logout,
-                      title: "Keluar",
-                      onTap: () => _showLogoutDialog()),
-                ],
-              ),
-            ),
-            const SizedBox(height: 80),
-          ],
+              const SizedBox(height: 80),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: const CustomBottomNavbar(currentIndex: 2),
@@ -302,132 +334,136 @@ class ProfileView extends GetView<ProfileController> {
               fontWeight: FontWeight.bold),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const SizedBox(height: 30),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 36),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF8B0000), Color(0xFFD32F2F)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                const SizedBox(height: 30),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 36),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8B0000), Color(0xFFD32F2F)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    const CircleAvatar(
-                      radius: 45,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.person,
-                          size: 50, color: Color(0xFF8B0000)),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      "Masuk untuk melihat profil",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Masuk untuk menyimpan skor, \ndan membuka avatar keren!",
-                      style: TextStyle(
-                          color: Colors.white70, fontSize: 13),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () => Get.toNamed('/login'),
-                      style: ElevatedButton.styleFrom(
+                  child: Column(
+                    children: [
+                      const CircleAvatar(
+                        radius: 45,
                         backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF8B0000),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 40, vertical: 14),
+                        child: Icon(Icons.person,
+                            size: 50, color: Color(0xFF8B0000)),
                       ),
-                      child: const Text(
-                        "Masuk",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: () => Get.toNamed('/register'),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                            color: Colors.white, width: 2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 40, vertical: 14),
-                      ),
-                      child: const Text(
-                        "Daftar",
+                      const SizedBox(height: 20),
+                      const Text(
+                        "Masuk untuk melihat profil",
                         style: TextStyle(
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Masuk untuk menyimpan skor, \ndan membuka avatar keren!",
+                        style: TextStyle(
+                            color: Colors.white70, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () => Get.toNamed('/login'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF8B0000),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 14),
+                        ),
+                        child: const Text(
+                          "Masuk",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () => Get.toNamed('/register'),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                              color: Colors.white, width: 2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 14),
+                        ),
+                        child: const Text(
+                          "Daftar",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _buildMenuItemSimple(
+                          icon: Icons.language,
+                          title: "Bahasa",
+                          onTap: () {}),
+                      const Divider(
+                          color: Colors.black12,
+                          height: 1,
+                          indent: 16,
+                          endIndent: 16),
+                      _buildMenuItemSimple(
+                          icon: Icons.notifications_outlined,
+                          title: "Notifikasi",
+                          onTap: () {}),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    _buildMenuItemSimple(
-                        icon: Icons.language,
-                        title: "Bahasa",
-                        onTap: () =>
-                            Get.snackbar("Bahasa", "Pilih bahasa")),
-                    const Divider(
-                        color: Colors.black12,
-                        height: 1,
-                        indent: 16,
-                        endIndent: 16),
-                    _buildMenuItemSimple(
-                        icon: Icons.notifications_outlined,
-                        title: "Notifikasi",
-                        onTap: () => Get.snackbar(
-                            "Notifikasi", "Pengaturan notifikasi")),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -521,10 +557,18 @@ class ProfileView extends GetView<ProfileController> {
                     color: Colors.amber,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(
-                    "⭐ ${controller.userStars.value} Skor",
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star, color: Colors.white, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        "${controller.userStars.value} Bintang",
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14,
+                            color: Colors.white),
+                      ),
+                    ],
                   ),
                 )),
             const SizedBox(height: 16),

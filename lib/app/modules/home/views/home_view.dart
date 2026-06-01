@@ -16,7 +16,6 @@ class HomeView extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFFFDE7E4),
         elevation: 0,
-        // ✅ AVATAR DENGAN INISIAL KALAU KOSONG
         leading: controller.isGuest
             ? null
             : Padding(
@@ -25,7 +24,6 @@ class HomeView extends StatelessWidget {
                   final avatar = controller.userAvatar.value;
                   final userName = controller.userName.value;
                   
-                  // ✅ KALAU AVATAR KOSONG, TAMPILKAN INISIAL
                   if (avatar.isEmpty) {
                     final initial = userName.isNotEmpty
                         ? userName[0].toUpperCase()
@@ -44,16 +42,12 @@ class HomeView extends StatelessWidget {
                     );
                   }
                   
-                  // ✅ KALAU ADA AVATAR, TAMPILKAN FOTO
                   return CircleAvatar(
                     radius: 40,
                     backgroundImage: avatar.startsWith('http')
                         ? NetworkImage(avatar) as ImageProvider
                         : AssetImage(avatar) as ImageProvider,
                     backgroundColor: Colors.grey.shade200,
-                    onBackgroundImageError: (_, __) {
-                      // Kalau error, fallback ke inisial
-                    },
                   );
                 }),
               ),
@@ -125,56 +119,61 @@ class HomeView extends StatelessWidget {
                     ],
                   ),
                 )),
+        // ✅ BINTANG HANYA TAMPIL KALAU SUDAH LOGIN
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.black),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  title: const Text("Notifikasi"),
-                  content: const Text("Apakah Anda ingin mengaktifkan notifikasi?"),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Tidak",
-                          style: TextStyle(color: Colors.black)),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Ya",
-                          style: TextStyle(color: Color(0xff73090D))),
+          if (!controller.isGuest)
+            Obx(() => Container(
+              margin: const EdgeInsets.only(right: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.amber,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star, color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${controller.userStars.value} Bintang',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
-              );
-            },
-          ),
+              ),
+            )),
         ],
       ),
-      body: Stack(
-        children: [
-          Obx(() {
-            if (controller.isLoading.value) {
-              return const Center(
-                child: CircularProgressIndicator(color: Color(0xFF73090D)),
-              );
-            }
-            return _homeContent(controller);
-          }),
-          const Align(
-            alignment: Alignment.bottomCenter,
-            child: CustomBottomNavbar(currentIndex: 0),
-          ),
-        ],
+      body: RefreshIndicator(
+        onRefresh: () => controller.fetchQuizzes(),
+        child: Stack(
+          children: [
+            Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF73090D)),
+                );
+              }
+              return _homeContent(controller);
+            }),
+            const Align(
+              alignment: Alignment.bottomCenter,
+              child: CustomBottomNavbar(currentIndex: 0),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _homeContent(HomeController controller) {
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

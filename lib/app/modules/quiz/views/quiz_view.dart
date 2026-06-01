@@ -103,8 +103,6 @@ class QuizView extends StatelessWidget {
                               ],
 
                               // Teks pertanyaan
-                              // Kalau ada gambar: teks di bawah gambar
-                              // Kalau tidak ada gambar: teks di tengah dengan Spacer
                               if (!hasImage) const Spacer(),
                               Text(
                                 question['question'],
@@ -119,7 +117,7 @@ class QuizView extends StatelessWidget {
                               if (!hasImage) const Spacer(),
                               if (hasImage) const Spacer(),
 
-                              // Pilihan jawaban (selalu vertikal, 4 opsi)
+                              // Pilihan jawaban
                               Column(
                                 children: options
                                     .map((option) => _buildOption(controller, option))
@@ -160,7 +158,7 @@ class QuizView extends StatelessWidget {
           ),
         ),
 
-        // Bar bawah correct/incorrect
+        // ✅ BAR BAWAH - SUDAH DIUBAH KE BAHASA INDONESIA
         bottomNavigationBar: Obx(() => AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           width: double.infinity,
@@ -173,7 +171,8 @@ class QuizView extends StatelessWidget {
               : Colors.transparent,
           child: controller.sudahKlikNext.value
               ? Text(
-                  controller.isCorrect.value ? " Correct" : " Incorrect",
+                  // ✅ DIUBAH: "Correct" → "BENAR", "Incorrect" → "SALAH"
+                  controller.isCorrect.value ? "BENAR" : "SALAH",
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

@@ -26,7 +26,6 @@ class QuizDetailView extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () {
-            // ✅ LANGSUNG KE HOME (TIDAK PAKAI Get.back)
             Get.offAllNamed('/home');
           },
         ),
@@ -59,7 +58,7 @@ class QuizDetailView extends StatelessWidget {
                             const SizedBox(width: 10),
                             const Expanded(
                               child: Text(
-                                'Login untuk membuka semua materi & simpan progres',
+                                'Login untuk membuka materi & simpan progres',
                                 style: TextStyle(
                                     fontSize: 12, color: Color(0xFF73090D)),
                               ),
@@ -97,7 +96,7 @@ class QuizDetailView extends StatelessWidget {
                   ),
                   const SizedBox(height: 15),
 
-                  // List chapter dengan pengecekan login dari controller
+                  // List chapter
                   Obx(() => ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -108,17 +107,16 @@ class QuizDetailView extends StatelessWidget {
                               controller.isChapterAccessible(index);
                           final bool isCompleted =
                               chapter['completed'] == true;
+                          final bool needsLogin =
+                              index > 0 && !controller.isLoggedIn.value;
 
                           return _buildChapterCard(
                             index: index,
                             title: chapter['title'],
                             isCompleted: isCompleted,
                             isLocked: !canAccess,
-                            needsLogin: index > 0 &&
-                                !controller.isLoggedIn.value,
-                            onTap: () {
-                              controller.startQuiz(chapter['title'], index);
-                            },
+                            needsLogin: needsLogin,
+                            controller: controller,
                           );
                         },
                       )),
@@ -127,7 +125,7 @@ class QuizDetailView extends StatelessWidget {
             ),
           ),
 
-          // Tombol Lanjutkan di bawah
+          // Tombol Lanjutkan
           Container(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
             decoration: BoxDecoration(
@@ -153,30 +151,88 @@ class QuizDetailView extends StatelessWidget {
     required bool isCompleted,
     required bool isLocked,
     required bool needsLogin,
-    required VoidCallback onTap,
+    required QuizDetailController controller,
   }) {
-    IconData leadingIcon;
-    Color leadingColor;
-    Color bgColor;
-
-    if (isCompleted) {
-      leadingIcon = Icons.check_circle;
-      leadingColor = Colors.green;
-      bgColor = const Color(0xFF73090D).withOpacity(0.1);
-    } else if (needsLogin) {
-      leadingIcon = Icons.lock_outline;
-      leadingColor = const Color(0xFF73090D);
-      bgColor = Colors.grey.shade100;
-    } else if (isLocked) {
-      leadingIcon = Icons.lock_outline;
-      leadingColor = Colors.grey;
-      bgColor = Colors.grey.shade100;
-    } else {
-      leadingIcon = Icons.lock_open_outlined;
-      leadingColor = const Color(0xFF73090D);
-      bgColor = Colors.grey.shade100;
+    // JIKA TERKUNCI (ABU-ABU)
+    if (isLocked || needsLogin) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Opacity(
+          opacity: 0.7,
+          child: ListTile(
+            onTap: () {
+              if (needsLogin) {
+                _showLoginDialog();
+              } else if (isLocked) {
+                _showMateriLockedDialog(index + 1);
+              }
+            },
+            leading: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.lock_outline, color: Colors.grey, size: 24),
+            ),
+            title: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+            trailing: const Icon(Icons.lock, color: Colors.grey, size: 18),
+          ),
+        ),
+      );
     }
 
+    // JIKA SUDAH SELESAI
+    if (isCompleted) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.green, width: 1),
+        ),
+        child: ListTile(
+          onTap: null,
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.green,
+              decoration: TextDecoration.lineThrough,
+            ),
+          ),
+          trailing: const Icon(Icons.check_circle, color: Colors.green, size: 20),
+        ),
+      );
+    }
+
+    // JIKA TERBUKA
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -191,35 +247,24 @@ class QuizDetailView extends StatelessWidget {
         ],
       ),
       child: ListTile(
-        onTap: onTap,
+        onTap: () => controller.startQuiz(title, index),
         leading: Container(
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: bgColor,
+            color: const Color(0xFF73090D).withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(leadingIcon, color: leadingColor, size: 24),
+          child: const Icon(Icons.lock_open_outlined, color: Color(0xFF73090D), size: 24),
         ),
         title: Text(
           title,
-          style: TextStyle(
-            fontWeight: isCompleted ? FontWeight.w600 : FontWeight.normal,
-            color: isLocked && !needsLogin ? Colors.grey : Colors.black87,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.normal,
           ),
         ),
-        subtitle: needsLogin && !isCompleted
-            ? const Text(
-                'Login untuk membuka',
-                style: TextStyle(fontSize: 11, color: Color(0xFF73090D)),
-              )
-            : null,
-        trailing: isCompleted
-            ? const Icon(Icons.check_circle, color: Colors.green, size: 20)
-            : (isLocked && !needsLogin
-                ? const Icon(Icons.lock, color: Colors.grey, size: 18)
-                : const Icon(Icons.arrow_forward_ios,
-                    size: 16, color: Colors.grey)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
       ),
     );
   }
@@ -253,7 +298,7 @@ class QuizDetailView extends StatelessWidget {
             ),
           ),
           child: const Text(
-            '🎉 SELESAI SEMUA 🎉',
+            '  SELESAI SEMUA ',
             style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -311,6 +356,82 @@ class QuizDetailView extends StatelessWidget {
               color: Colors.white),
         ),
       ),
+    );
+  }
+
+  void _showLoginDialog() {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'Login Diperlukan',
+          style: TextStyle(
+            color: Color(0xFF73090D),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Silakan login untuk mengakses semua materi!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text(
+              'Nanti Saja',
+              style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              Get.toNamed('/login');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF73090D),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Login Sekarang',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  void _showMateriLockedDialog(int materiKe) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'Materi Terkunci',
+          style: TextStyle(
+            color: Color(0xFF73090D),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Selesaikan materi $materiKe terlebih dahulu!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text(
+              'OK',
+              style: TextStyle(color: Color(0xFF73090D)),
+            ),
+          ),
+        ],
+      ),
+      barrierDismissible: true,
     );
   }
 }

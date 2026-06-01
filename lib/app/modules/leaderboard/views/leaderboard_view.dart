@@ -24,45 +24,43 @@ class LeaderboardView extends StatelessWidget {
         backgroundColor: const Color(0xFF73090D),
         elevation: 0,
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () => controller.fetchLeaderboard(),
-          ),
-        ],
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF73090D)),
-          );
-        }
+      body: RefreshIndicator(
+        onRefresh: () => controller.fetchLeaderboard(),
+        child: Obx(() {
+          if (controller.isLoading.value) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF73090D)),
+            );
+          }
 
-        return Stack(
-          children: [
-            Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 20),
-                    child: Column(
-                      children: [
-                        _buildTopThree(controller),
-                        const SizedBox(height: 30),
-                        _buildOtherRanks(controller),
-                        const SizedBox(height: 120),
-                      ],
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 20),
+                      child: Column(
+                        children: [
+                          _buildTopThree(controller),
+                          const SizedBox(height: 30),
+                          _buildOtherRanks(controller),
+                          const SizedBox(height: 120),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const CustomBottomNavbar(currentIndex: 1),
-              ],
-            ),
-            Obx(() => _buildCurrentUserCard(controller)),
-          ],
-        );
-      }),
+                  const CustomBottomNavbar(currentIndex: 1),
+                ],
+              ),
+              Obx(() => _buildCurrentUserCard(controller)),
+            ],
+          );
+        }),
+      ),
     );
   }
 
