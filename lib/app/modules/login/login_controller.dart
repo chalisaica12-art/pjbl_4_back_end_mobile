@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart'; // ← TAMBAH INI
 
 class LoginController extends GetxController {
   final emailController = TextEditingController();
@@ -52,14 +53,35 @@ class LoginController extends GetxController {
     try {
       isLoading.value = true;
 
-      await supabase.auth.signInWithPassword(
+      final response = await supabase.auth.signInWithPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
+      // ============================================================
+      // CEK ROLE: ambil dari raw_app_meta_data
+      // ============================================================
+      final appMeta = response.user?.appMetadata ?? {};
+      final role = appMeta['role'] ?? 'user';
+
       _showSnackbar('Berhasil Masuk', Colors.green);
       await Future.delayed(const Duration(milliseconds: 1500));
-      Get.offAllNamed('/home');
+
+      if (role == 'admin') {
+        // ── ADMIN: buka dashboard web di browser ──────────────────
+        // Ganti URL ini dengan URL Netlify kamu setelah upload nanti
+        // Contoh: 'https://sejarah-admin.netlify.app'
+        // Untuk sekarang (testing lokal), pakai file lokal dulu
+        final url = Uri.parse('https://GANTI_DENGAN_URL_NETLIFY_KAMU');
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        }
+        // Tetap di halaman login (tidak masuk ke app)
+        // karena admin pakai browser, bukan app
+      } else {
+        // ── USER BIASA: masuk ke halaman utama app ─────────────────
+        Get.offAllNamed('/home');
+      }
 
     } on AuthException catch (e) {
       String pesanError = e.message;
