@@ -13,11 +13,13 @@ class HomeController extends GetxController {
   final userName = 'Tamu'.obs;
   final userAvatar = ''.obs;
   final userStars = 0.obs;
-
-  // ✅ Map era_id -> true/false (apakah semua materi di era itu selesai)
   final eraCompletionMap = <String, bool>{}.obs;
-
   final pageController = PageController();
+
+  // Realtime
+  RealtimeChannel? _quizzesChannel;
+  RealtimeChannel? _profileChannel;
+  RealtimeChannel? _progressChannel;
 
   final bannerImages = [
     "assets/gambar/ban1.jpeg",
@@ -33,6 +35,7 @@ class HomeController extends GetxController {
     super.onInit();
     fetchQuizzes();
     fetchUserProfile();
+    _subscribeRealtime();
 
     if (Get.isRegistered<ProfileController>()) {
       final profileCtrl = Get.find<ProfileController>();
@@ -40,6 +43,53 @@ class HomeController extends GetxController {
         userAvatar.value = profileCtrl.activeAvatarImage;
       });
       userAvatar.value = profileCtrl.activeAvatarImage;
+    }
+  }
+
+  void _subscribeRealtime() {
+    // ✅ Realtime quizzes - kalau admin tambah/edit era
+    _quizzesChannel = supabase
+        .channel('home_quizzes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'quizzes',
+          callback: (_) => fetchQuizzes(),
+        )
+        .subscribe();
+
+    // ✅ Realtime profile - kalau stars/avatar berubah
+    if (currentUserId != null) {
+      _profileChannel = supabase
+          .channel('home_profile_$currentUserId')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'profiles',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'id',
+              value: currentUserId!,
+            ),
+            callback: (_) => fetchUserProfile(),
+          )
+          .subscribe();
+
+      // ✅ Realtime progress - kalau chapter selesai
+      _progressChannel = supabase
+          .channel('home_progress_$currentUserId')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'user_progress',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'user_id',
+              value: currentUserId!,
+            ),
+            callback: (_) => fetchQuizzes(),
+          )
+          .subscribe();
     }
   }
 
@@ -75,18 +125,14 @@ class HomeController extends GetxController {
     }
   }
 
-  // ✅ Cek apakah semua materi di tiap era sudah selesai
   Future<void> _fetchEraCompletion(List<Map<String, dynamic>> eras) async {
     if (currentUserId == null) return;
-
     try {
       final newMap = <String, bool>{};
-
       for (final era in eras) {
         final eraId = era['id']?.toString() ?? '';
         if (eraId.isEmpty) continue;
 
-        // Hitung total materi di era ini
         final materiResponse = await supabase
             .from('materials')
             .select('id')
@@ -98,7 +144,6 @@ class HomeController extends GetxController {
           continue;
         }
 
-        // Hitung materi yang sudah selesai user di era ini
         final progressResponse = await supabase
             .from('user_progress')
             .select('chapter_index')
@@ -108,9 +153,7 @@ class HomeController extends GetxController {
         final completedCount = (progressResponse as List).length;
 
         newMap[eraId] = completedCount >= totalMateri;
-        print('Era $eraId: $completedCount/$totalMateri selesai');
       }
-
       eraCompletionMap.value = newMap;
     } catch (e) {
       print('Error fetching era completion: $e');
@@ -120,23 +163,18 @@ class HomeController extends GetxController {
   Future<void> fetchQuizzes() async {
     try {
       isLoading.value = true;
-
       final response = await supabase
           .from('quizzes')
           .select()
           .order('order_number', ascending: true);
 
       final rawQuizzes = List<Map<String, dynamic>>.from(response);
-
-      // Tampilkan 3 era pertama
       final filteredQuizzes = rawQuizzes.where((quiz) {
         final orderNum = quiz['order_number'] as int? ?? 0;
         return orderNum >= 1 && orderNum <= 3;
       }).toList();
 
       quizList.value = filteredQuizzes;
-
-      // ✅ Setelah dapat data era, fetch completion status
       await _fetchEraCompletion(filteredQuizzes);
     } catch (e) {
       print('Error fetching quizzes: $e');
@@ -145,18 +183,13 @@ class HomeController extends GetxController {
     }
   }
 
-  // ✅ Era 1 selalu unlock
-  // Era N unlock kalau semua materi di era N-1 sudah selesai
   bool isUnlocked(int orderNumber) {
     if (orderNumber == 1) return true;
     if (isGuest) return false;
-
-    // Cari era sebelumnya
     final prevEra = quizList.firstWhereOrNull(
       (q) => (q['order_number'] as int? ?? 0) == orderNumber - 1,
     );
     if (prevEra == null) return false;
-
     final prevEraId = prevEra['id']?.toString() ?? '';
     return eraCompletionMap[prevEraId] == true;
   }
@@ -166,47 +199,30 @@ class HomeController extends GetxController {
     final isLocked = !isUnlocked(orderNum);
 
     if (isLocked && isGuest) {
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Login Diperlukan'),
-          content: const Text('Kamu harus login untuk memainkan era ini dan menyimpan skor!'),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () {
-                Get.back();
-                Get.toNamed('/login');
-              },
-              child: const Text('Login', style: TextStyle(color: Color(0xFF73090D))),
-            ),
-          ],
-        ),
-      );
+      Get.dialog(AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Login Diperlukan'),
+        content: const Text('Kamu harus login untuk memainkan era ini dan menyimpan skor!'),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('Batal', style: TextStyle(color: Colors.grey))),
+          TextButton(
+            onPressed: () { Get.back(); Get.toNamed('/login'); },
+            child: const Text('Login', style: TextStyle(color: Color(0xFF73090D))),
+          ),
+        ],
+      ));
       return;
     }
 
     if (isLocked) {
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            'Era Terkunci',
-            style: TextStyle(color: Color(0xFF73090D), fontWeight: FontWeight.bold),
-          ),
-          content: const Text('Selesaikan semua materi era sebelumnya terlebih dahulu!'),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: const Text('OK', style: TextStyle(color: Color(0xFF73090D))),
-            ),
-          ],
-        ),
-        barrierDismissible: true,
-      );
+      Get.dialog(AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Era Terkunci', style: TextStyle(color: Color(0xFF73090D), fontWeight: FontWeight.bold)),
+        content: const Text('Selesaikan semua materi era sebelumnya terlebih dahulu!'),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('OK', style: TextStyle(color: Color(0xFF73090D)))),
+        ],
+      ), barrierDismissible: true);
       return;
     }
 
@@ -216,33 +232,22 @@ class HomeController extends GetxController {
   void changeTab(int index) {
     selectedIndex.value = index;
     switch (index) {
-      case 0:
-        break;
-      case 1:
-        Get.toNamed('/leaderboard');
-        break;
+      case 0: break;
+      case 1: Get.toNamed('/leaderboard'); break;
       case 2:
         if (isGuest) {
-          Get.dialog(
-            AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Text('Login Diperlukan'),
-              content: const Text('Kamu harus login untuk melihat profil!'),
-              actions: [
-                TextButton(
-                  onPressed: () => Get.back(),
-                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Get.back();
-                    Get.toNamed('/login');
-                  },
-                  child: const Text('Login', style: TextStyle(color: Color(0xFF73090D))),
-                ),
-              ],
-            ),
-          );
+          Get.dialog(AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Login Diperlukan'),
+            content: const Text('Kamu harus login untuk melihat profil!'),
+            actions: [
+              TextButton(onPressed: () => Get.back(), child: const Text('Batal', style: TextStyle(color: Colors.grey))),
+              TextButton(
+                onPressed: () { Get.back(); Get.toNamed('/login'); },
+                child: const Text('Login', style: TextStyle(color: Color(0xFF73090D))),
+              ),
+            ],
+          ));
           return;
         }
         Get.toNamed('/profile');
@@ -252,6 +257,9 @@ class HomeController extends GetxController {
 
   @override
   void onClose() {
+    _quizzesChannel?.unsubscribe();
+    _profileChannel?.unsubscribe();
+    _progressChannel?.unsubscribe();
     pageController.dispose();
     super.onClose();
   }

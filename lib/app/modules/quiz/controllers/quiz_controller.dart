@@ -16,62 +16,25 @@ class QuizController extends GetxController {
   var sudahKlikNext = false.obs;
   var isCorrect = false.obs;
   var correctAnswers = 0.obs;
-  var isLoading = true.obs;
+  var isLoading = true.obs;  // ✅ PENTING: buat loading state
 
   // Soal dari database
   var questions = <Map<String, dynamic>>[].obs;
 
-  // Hardcode fallback soal materi 1 (kalau database belum ada)
-  final List<Map<String, dynamic>> _fallbackQuestions = [
-    {
-      'question_text': 'Siapakah tokoh yang pertama kali menemukan fosil manusia purba Meganthropus Paleojavanicus?',
-      'option_a': 'Eugene Dubois',
-      'option_b': 'G.H.R. von Koenigswald',
-      'option_c': 'Ter Haar',
-      'option_d': 'Raden Saleh',
-      'correct_answer': 'B',
-    },
-    {
-      'question_text': 'Di daerah manakah fosil rahang dan gigi Meganthropus Paleojavanicus pertama kali ditemukan?',
-      'option_a': 'Trinil, Ngawi',
-      'option_b': 'Wajak, Tulungagung',
-      'option_c': 'Sangiran, Sragen',
-      'option_d': 'Ngandong, Blora',
-      'correct_answer': 'C',
-    },
-    {
-      'question_text': 'Secara harfiah, apa arti dari nama "Meganthropus Paleojavanicus"?',
-      'option_a': 'Manusia kera dari Jawa yang berjalan tegak',
-      'option_b': 'Manusia raksasa tua dari Jawa',
-      'option_c': 'Manusia cerdas yang berasal dari Pulau Jawa',
-      'option_d': 'Manusia kera yang memiliki tubuh perkasa',
-      'correct_answer': 'B',
-    },
-    {
-      'question_text': 'Berdasarkan struktur rahangnya, apa jenis makanan utama dari Meganthropus Paleojavanicus?',
-      'option_a': 'Daging hewan buruan',
-      'option_b': 'Ikan dan kerang-kerangan',
-      'option_c': 'Tumbuh-tumbuhan dan buah-buahan',
-      'option_d': 'Makanan yang sudah dimasak',
-      'correct_answer': 'C',
-    },
-    {
-      'question_text': 'Fosil Meganthropus Paleojavanicus ditemukan pada lapisan tanah Jetis, yang disebut sebagai lapisan...',
-      'option_a': 'Pleistosen Atas',
-      'option_b': 'Pleistosen Tengah',
-      'option_c': 'Holosen',
-      'option_d': 'Pleistosen Bawah',
-      'correct_answer': 'D',
-    },
-  ];
-
-  Map<String, dynamic> get currentQuestionData => questions[currentQuestion.value];
+  // ✅ GETTER AMAN
+  Map<String, dynamic> get currentQuestionData {
+    if (questions.isEmpty || currentQuestion.value >= questions.length) {
+      return {};  // return empty map, bukan null
+    }
+    return questions[currentQuestion.value];
+  }
+  
   int get totalQuestions => questions.length;
 
   String? get currentUserId => supabase.auth.currentUser?.id;
   bool get isGuest => currentUserId == null;
 
-  // Argument dari splash loading
+  // Argument
   late String eraId;
   late String eraTitle;
   late String chapterTitle;
@@ -88,43 +51,61 @@ class QuizController extends GetxController {
     chapterIndex = args['chapter_index'] ?? 0;
     materialId = args['material_id']?.toString();
 
-    fetchQuestions();
+    fetchQuestions();  // ambil data dari database
   }
 
   Future<void> fetchQuestions() async {
     try {
-      isLoading.value = true;
+      isLoading.value = true;  // ✅ mulai loading
+      
+      // Ambil dari DATABASE, BUKAN HARDCODE
+      final response = await supabase
+          .from('questions')
+          .select()
+          .eq('material_id', materialId ?? '')
+          .order('order_number', ascending: true);
 
-      if (materialId != null && materialId!.isNotEmpty) {
-        // Fetch dari database berdasarkan material_id
-        final response = await supabase
-            .from('questions')
-            .select()
-            .eq('material_id', materialId!)
-            .order('order_number', ascending: true);
-
-        final List<dynamic> data = response as List<dynamic>;
-        if (data.isNotEmpty) {
-          questions.value = List<Map<String, dynamic>>.from(data);
-        } else {
-          // Database kosong, pakai fallback
-          questions.value = _fallbackQuestions;
-        }
+      final List<dynamic> data = response as List<dynamic>;
+      
+      if (data.isNotEmpty) {
+        questions.value = List<Map<String, dynamic>>.from(data);
       } else {
-        // Tidak ada material_id, pakai fallback
-        questions.value = _fallbackQuestions;
+        // Optional: pakai fallback kalau database kosong
+        questions.value = [];
+        // Tampilkan pesan error
+        Get.snackbar('Error', 'Tidak ada soal untuk materi ini');
       }
+      
     } catch (e) {
       print('Fetch questions error: $e');
-      questions.value = _fallbackQuestions;
+      questions.value = [];
+      Get.snackbar('Error', 'Gagal mengambil data soal: $e');
     } finally {
-      isLoading.value = false;
-      _startTimer();
+      isLoading.value = false;  // ✅ selesai loading
+      if (questions.isNotEmpty) {
+        _startTimer();
+      }
     }
   }
 
-  // Helper ambil jawaban dari format database (A/B/C/D)
+  // ✅ METHOD GET OPTIONS YANG AMAN
+  // METHOD GET OPTIONS YANG AMAN - VERSION SIMPLE
+List<String> getOptions(Map<String, dynamic> q) {
+  if (q.isEmpty) return [];
+  
+  final List<String> result = [];
+  result.add(q['option_a'] ?? '');
+  result.add(q['option_b'] ?? '');
+  result.add(q['option_c'] ?? '');
+  result.add(q['option_d'] ?? '');
+  
+  return result;
+}
+
+  // ✅ METHOD GET CORRECT ANSWER
   String getCorrectAnswerText(Map<String, dynamic> q) {
+    if (q.isEmpty) return '';
+    
     final answer = q['correct_answer']?.toString().toUpperCase() ?? '';
     switch (answer) {
       case 'A': return q['option_a'] ?? '';
@@ -135,16 +116,8 @@ class QuizController extends GetxController {
     }
   }
 
-  List<String> getOptions(Map<String, dynamic> q) {
-    return [
-      q['option_a'] ?? '',
-      q['option_b'] ?? '',
-      q['option_c'] ?? '',
-      q['option_d'] ?? '',
-    ];
-  }
-
   void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       seconds.value++;
       if (seconds.value >= 60) {
@@ -165,6 +138,7 @@ class QuizController extends GetxController {
   }
 
   int _hitungStars(int correct, int total) {
+    if (total == 0) return 0;
     final persen = (correct / total) * 100;
     if (persen >= 80) return 3;
     if (persen >= 60) return 2;
@@ -174,6 +148,7 @@ class QuizController extends GetxController {
 
   Future<void> _simpanScore() async {
     if (isGuest) return;
+    if (totalQuestions == 0) return;
 
     try {
       final score = (correctAnswers.value * 100 ~/ totalQuestions);
@@ -182,6 +157,7 @@ class QuizController extends GetxController {
 
       await supabase.from('quiz_scores').insert({
         'user_id': currentUserId,
+        'material_id': materialId,  // ✅ simpan juga material_id
         'score': score,
         'correct_answers': correctAnswers.value,
         'total_questions': totalQuestions,
@@ -190,6 +166,7 @@ class QuizController extends GetxController {
         'played_at': DateTime.now().toIso8601String(),
       });
 
+      // Update profil user
       final profileResponse = await supabase
           .from('profiles')
           .select('stars, xp, level')
@@ -217,6 +194,7 @@ class QuizController extends GetxController {
         'xp': finalXP,
         'level': finalLevel,
       }).eq('id', currentUserId!);
+      
     } catch (e) {
       print('Error simpan score: $e');
     }
@@ -224,6 +202,7 @@ class QuizController extends GetxController {
 
   void cekJawaban() {
     if (selectedAnswer.value.isEmpty) return;
+    if (totalQuestions == 0) return;
 
     sudahKlikNext.value = true;
     final correctText = getCorrectAnswerText(currentQuestionData);
@@ -245,6 +224,7 @@ class QuizController extends GetxController {
           'era_title': eraTitle,
           'chapter': chapterTitle,
           'chapter_index': chapterIndex,
+          'material_id': materialId,
           'totalMinutes': minutes.value,
           'totalSeconds': seconds.value,
           'correctAnswers': correctAnswers.value,

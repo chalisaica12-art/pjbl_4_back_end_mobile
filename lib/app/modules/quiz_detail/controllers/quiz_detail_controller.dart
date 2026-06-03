@@ -13,6 +13,11 @@ class QuizDetailController extends GetxController {
   var isLoggedIn = false.obs;
   var chapters = <Map<String, dynamic>>[].obs;
 
+  // Realtime
+  RealtimeChannel? _materialsChannel;
+  RealtimeChannel? _progressChannel;
+  String _currentEraId = '';
+
   bool get userLoggedIn => supabase.auth.currentUser != null;
   String? get userId => supabase.auth.currentUser?.id;
 
@@ -21,7 +26,53 @@ class QuizDetailController extends GetxController {
     super.onInit();
     isLoggedIn.value = userLoggedIn;
     final quizData = Get.arguments as Map<String, dynamic>;
+    _currentEraId = quizData['id']?.toString() ?? '';
     loadChapters(quizData);
+    _subscribeRealtime();
+  }
+
+  void _subscribeRealtime() {
+    if (_currentEraId.isEmpty) return;
+
+    // ✅ Realtime materials - kalau admin tambah/edit materi
+    _materialsChannel = supabase
+        .channel('detail_materials_$_currentEraId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'materials',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'era_id',
+            value: _currentEraId,
+          ),
+          callback: (_) {
+            final quizData = Get.arguments as Map<String, dynamic>;
+            loadChapters(quizData);
+          },
+        )
+        .subscribe();
+
+    // ✅ Realtime progress user
+    if (userId != null) {
+      _progressChannel = supabase
+          .channel('detail_progress_${userId}_$_currentEraId')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'user_progress',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'user_id',
+              value: userId!,
+            ),
+            callback: (_) {
+              final quizData = Get.arguments as Map<String, dynamic>;
+              loadChapters(quizData);
+            },
+          )
+          .subscribe();
+    }
   }
 
   Future<void> loadChapters(Map<String, dynamic> quizData) async {
@@ -29,7 +80,6 @@ class QuizDetailController extends GetxController {
       isLoading.value = true;
       final eraId = quizData['id']?.toString() ?? '';
 
-      // Fetch materi dari database
       final response = await supabase
           .from('materials')
           .select('id, title, order_number')
@@ -38,16 +88,8 @@ class QuizDetailController extends GetxController {
 
       final List<dynamic> materiList = response as List<dynamic>;
 
-      chapters.value = materiList.map((m) => {
-        'id': m['id'],
-        'title': m['title'],
-        'order_number': m['order_number'],
-        'completed': false,
-        'locked': (m['order_number'] as int) > 1,
-      }).toList();
-
-      // Kalau belum ada data di database, fallback ke hardcode sementara
-      if (chapters.isEmpty) {
+      if (materiList.isEmpty) {
+        // Fallback kalau database kosong
         chapters.value = [
           {'id': null, 'title': 'Meganthropus Paleojavanicus', 'order_number': 1, 'completed': false, 'locked': false},
           {'id': null, 'title': 'Pithecanthropus Erectus', 'order_number': 2, 'completed': false, 'locked': true},
@@ -60,6 +102,14 @@ class QuizDetailController extends GetxController {
           {'id': null, 'title': 'Zaman Megalitikum (Batu Besar)', 'order_number': 9, 'completed': false, 'locked': true},
           {'id': null, 'title': 'Zaman Logam (Perundagian)', 'order_number': 10, 'completed': false, 'locked': true},
         ];
+      } else {
+        chapters.value = materiList.map((m) => {
+          'id': m['id'],
+          'title': m['title'],
+          'order_number': m['order_number'],
+          'completed': false,
+          'locked': (m['order_number'] as int) > 1,
+        }).toList();
       }
 
       if (userLoggedIn) {
@@ -115,27 +165,17 @@ class QuizDetailController extends GetxController {
     return !chapters[index]['locked'];
   }
 
-  bool canStartQuiz(int chapterIndex) {
-    return isChapterAccessible(chapterIndex);
-  }
+  bool canStartQuiz(int chapterIndex) => isChapterAccessible(chapterIndex);
 
   void startQuiz(String chapterTitle, int chapterIndex) {
     if (!isChapterAccessible(chapterIndex)) {
       if (!isLoggedIn.value && chapterIndex > 0) {
-        Get.snackbar(
-          'Login Diperlukan',
-          'Silakan login untuk mengakses materi ini',
-          backgroundColor: const Color(0xFF73090D),
-          colorText: Colors.white,
-        );
+        Get.snackbar('Login Diperlukan', 'Silakan login untuk mengakses materi ini',
+            backgroundColor: const Color(0xFF73090D), colorText: Colors.white);
         Get.toNamed('/login');
       } else if (chapterIndex > 0 && !chapters[chapterIndex - 1]['completed']) {
-        Get.snackbar(
-          'Materi Terkunci',
-          'Selesaikan materi sebelumnya terlebih dahulu!',
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-        );
+        Get.snackbar('Materi Terkunci', 'Selesaikan materi sebelumnya terlebih dahulu!',
+            backgroundColor: Colors.orange, colorText: Colors.white);
       }
       return;
     }
@@ -155,11 +195,9 @@ class QuizDetailController extends GetxController {
     if (chapterIndex < chapters.length) {
       chapters[chapterIndex]['completed'] = true;
       chapters[chapterIndex]['locked'] = false;
-
       if (chapterIndex + 1 < chapters.length) {
         chapters[chapterIndex + 1]['locked'] = false;
       }
-
       chapters.refresh();
       _updateProgress();
 
@@ -171,7 +209,6 @@ class QuizDetailController extends GetxController {
             'chapter_index': chapterIndex,
             'completed': true,
           });
-
           await _checkEraCompletion();
         } catch (e) {
           print('Save progress error: $e');
@@ -180,19 +217,15 @@ class QuizDetailController extends GetxController {
     }
   }
 
-  bool get isAllChaptersCompleted {
-    return chapters.every((chapter) => chapter['completed'] == true);
-  }
+  bool get isAllChaptersCompleted =>
+      chapters.every((chapter) => chapter['completed'] == true);
 
   Future<void> _checkEraCompletion() async {
     if (isAllChaptersCompleted) {
-      Get.snackbar(
-        'Selamat! 🎉',
-        'Kamu telah menyelesaikan semua materi!\nEra berikutnya sekarang terbuka.',
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-      );
+      Get.snackbar('Selamat! 🎉',
+          'Kamu telah menyelesaikan semua materi!\nEra berikutnya sekarang terbuka.',
+          backgroundColor: Colors.green, colorText: Colors.white,
+          duration: const Duration(seconds: 4));
 
       if (Get.isRegistered<HomeController>()) {
         await Get.find<HomeController>().fetchQuizzes();
@@ -200,7 +233,12 @@ class QuizDetailController extends GetxController {
     }
   }
 
-  String getProgressPercent() {
-    return '${(progress.value * 100).toInt()}%';
+  String getProgressPercent() => '${(progress.value * 100).toInt()}%';
+
+  @override
+  void onClose() {
+    _materialsChannel?.unsubscribe();
+    _progressChannel?.unsubscribe();
+    super.onClose();
   }
 }

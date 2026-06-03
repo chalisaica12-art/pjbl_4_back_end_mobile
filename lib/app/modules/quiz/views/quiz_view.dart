@@ -10,12 +10,66 @@ class QuizView extends StatelessWidget {
     final controller = Get.find<QuizController>();
 
     return Obx(() {
+      // ✅ TAMPILKAN LOADING SELAGI AMBIL DATA DARI DATABASE
+      if (controller.isLoading.value) {
+        return const Scaffold(
+          backgroundColor: Color(0xffFDE7E4),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(color: Color(0xFF73090D)),
+                SizedBox(height: 16),
+                Text(
+                  "Memuat soal dari database...",
+                  style: TextStyle(fontSize: 14, color: Color(0xFF73090D)),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // ✅ CEK APAKAH DATA KOSONG
+      if (controller.questions.isEmpty) {
+        return Scaffold(
+          backgroundColor: const Color(0xffFDE7E4),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text(
+                  "Tidak ada soal",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Material ID: ${controller.materialId ?? 'tidak ada'}",
+                  style: const TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF73090D),
+                  ),
+                  child: const Text("Kembali"),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // ✅ DATA SUDAH SIAP, TAMPILKAN QUIZ
       final question = controller.currentQuestionData;
-      final hasImage = question['image'] != null;
+      final hasImage = question['image'] != null && question['image'] != '';
       final options = controller.getOptions(question);
       final questionNumber = controller.currentQuestion.value + 1;
       final totalQuestions = controller.totalQuestions;
-      final progressValue = questionNumber / totalQuestions;
+      final progressValue = totalQuestions > 0 ? questionNumber / totalQuestions : 0.0;
 
       return Scaffold(
         backgroundColor: const Color(0xffFDE7E4),
@@ -27,7 +81,6 @@ class QuizView extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Column(
                     children: [
-                      // Judul chapter
                       const Text(
                         "Era Prakasa",
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -78,7 +131,7 @@ class QuizView extends StatelessWidget {
                               if (hasImage) ...[
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(15),
-                                  child: Image.asset(
+                                  child: Image.network(
                                     question['image'],
                                     height: 180,
                                     width: double.infinity,
@@ -105,7 +158,7 @@ class QuizView extends StatelessWidget {
                               // Teks pertanyaan
                               if (!hasImage) const Spacer(),
                               Text(
-                                question['question'],
+                                question['question_text'] ?? '',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: Colors.white,
@@ -158,7 +211,6 @@ class QuizView extends StatelessWidget {
           ),
         ),
 
-        // ✅ BAR BAWAH - SUDAH DIUBAH KE BAHASA INDONESIA
         bottomNavigationBar: Obx(() => AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           width: double.infinity,
@@ -171,7 +223,6 @@ class QuizView extends StatelessWidget {
               : Colors.transparent,
           child: controller.sudahKlikNext.value
               ? Text(
-                  // ✅ DIUBAH: "Correct" → "BENAR", "Incorrect" → "SALAH"
                   controller.isCorrect.value ? "BENAR" : "SALAH",
                   style: const TextStyle(
                     color: Colors.white,
@@ -189,17 +240,17 @@ class QuizView extends StatelessWidget {
     return Obx(() {
       final isSelected = controller.selectedAnswer.value == text;
       final sudahKlik = controller.sudahKlikNext.value;
-      final isKunci = text == controller.currentQuestionData['answer'];
+      final isKunci = text == controller.getCorrectAnswerText(controller.currentQuestionData);
 
       Color bgColor = Colors.white;
       Color borderColor = Colors.transparent;
 
       if (sudahKlik) {
         if (isKunci) {
-          bgColor = const Color(0xff2CB57E); // hijau = jawaban benar
+          bgColor = const Color(0xff2CB57E);
           borderColor = const Color(0xff2CB57E);
         } else if (isSelected && !isKunci) {
-          bgColor = const Color(0xffD93D3D); // merah = salah pilih
+          bgColor = const Color(0xffD93D3D);
           borderColor = const Color(0xffD93D3D);
         }
       } else if (isSelected) {

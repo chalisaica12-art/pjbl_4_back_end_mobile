@@ -1,5 +1,5 @@
-import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../data/models/avatar_model.dart';
 import '../../home/controllers/home_controller.dart';
@@ -22,11 +22,47 @@ class ProfileController extends GetxController {
   var avatars = <AvatarModel>[].obs;
   var isLoading = true.obs;
 
+  // Realtime
+  RealtimeChannel? _profileChannel;
+  RealtimeChannel? _avatarsChannel;
+
   @override
   void onInit() {
     super.onInit();
     _loadAvatars();
     fetchProfile();
+    _subscribeRealtime();
+  }
+
+  void _subscribeRealtime() {
+    // ✅ Realtime profile user
+    if (userId != null) {
+      _profileChannel = supabase
+          .channel('profile_$userId')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'profiles',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'id',
+              value: userId!,
+            ),
+            callback: (_) => fetchProfile(),
+          )
+          .subscribe();
+    }
+
+    // ✅ Realtime avatars - kalau admin tambah avatar baru
+    _avatarsChannel = supabase
+        .channel('profile_avatars')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'avatars',
+          callback: (_) => _loadAvatars(),
+        )
+        .subscribe();
   }
 
   Future<void> fetchProfile() async {
@@ -57,7 +93,6 @@ class ProfileController extends GetxController {
       maxXP.value = 1000 + (userLevel.value - 1) * 500;
       levelTitle.value = _getLevelTitle(userLevel.value);
 
-      // ✅ Refresh avatars setiap fetchProfile supaya data terbaru dari database
       await _loadAvatars();
     } catch (e) {
       print('Error fetch profile: $e');
@@ -182,5 +217,12 @@ class ProfileController extends GetxController {
     await supabase.auth.signOut();
     Get.delete<ProfileController>(force: true);
     Get.offAllNamed('/login');
+  }
+
+  @override
+  void onClose() {
+    _profileChannel?.unsubscribe();
+    _avatarsChannel?.unsubscribe();
+    super.onClose();
   }
 }
