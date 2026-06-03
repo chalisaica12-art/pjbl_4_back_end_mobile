@@ -12,7 +12,7 @@ class QuizView extends StatelessWidget {
     return Obx(() {
       final question = controller.currentQuestionData;
       final hasImage = question['image'] != null;
-      final options = question['options'] as List<String>;
+      final options = controller.getOptions(question);
       final questionNumber = controller.currentQuestion.value + 1;
       final totalQuestions = controller.totalQuestions;
       final progressValue = questionNumber / totalQuestions;
