@@ -25,79 +25,102 @@ class QuizDetailView extends StatelessWidget {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () {
-            Get.offAllNamed('/home');
-          },
+          onPressed: () => Get.offAllNamed('/home'),
         ),
       ),
       body: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Info login banner (kalau belum login)
-                  Obx(() {
-                    if (!controller.isLoggedIn.value) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF73090D).withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: const Color(0xFF73090D).withOpacity(0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.info_outline,
-                                color: Color(0xFF73090D), size: 20),
-                            const SizedBox(width: 10),
-                            const Expanded(
-                              child: Text(
-                                'Login untuk membuka materi & simpan progres',
-                                style: TextStyle(
-                                    fontSize: 12, color: Color(0xFF73090D)),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => Get.toNamed('/login'),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF73090D),
-                                  borderRadius: BorderRadius.circular(20),
+            child: RefreshIndicator(
+              color: const Color(0xFF73090D),
+              onRefresh: () => controller.loadChapters(quizData),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Info login banner
+                    Obx(() {
+                      if (!controller.isLoggedIn.value) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF73090D).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: const Color(0xFF73090D).withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline,
+                                  color: Color(0xFF73090D), size: 20),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  'Login untuk membuka materi & simpan progres',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Color(0xFF73090D)),
                                 ),
-                                child: const Text('Login',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold)),
                               ),
-                            )
-                          ],
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  }),
+                              GestureDetector(
+                                onTap: () => Get.toNamed('/login'),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF73090D),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Text('Login',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                              )
+                            ],
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }),
 
-                  const Text(
-                    'Unit & Materi',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF73090D),
+                    const Text(
+                      'Unit & Materi',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF73090D),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 15),
+                    const SizedBox(height: 15),
 
-                  // List chapter
-                  Obx(() => ListView.builder(
+                    // Loading state
+                    Obx(() {
+                      if (controller.isLoading.value) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(40),
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF73090D),
+                            ),
+                          ),
+                        );
+                      }
+
+                      if (controller.chapters.isEmpty) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(40),
+                            child: Text('Belum ada materi untuk era ini'),
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: controller.chapters.length,
@@ -119,8 +142,10 @@ class QuizDetailView extends StatelessWidget {
                             controller: controller,
                           );
                         },
-                      )),
-                ],
+                      );
+                    }),
+                  ],
+                ),
               ),
             ),
           ),
@@ -153,7 +178,6 @@ class QuizDetailView extends StatelessWidget {
     required bool needsLogin,
     required QuizDetailController controller,
   }) {
-    // JIKA TERKUNCI (ABU-ABU)
     if (isLocked || needsLogin) {
       return Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -187,20 +211,15 @@ class QuizDetailView extends StatelessWidget {
               ),
               child: const Icon(Icons.lock_outline, color: Colors.grey, size: 24),
             ),
-            title: Text(
-              title,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
+            title: Text(title,
+                style: const TextStyle(
+                    color: Colors.grey, fontWeight: FontWeight.normal)),
             trailing: const Icon(Icons.lock, color: Colors.grey, size: 18),
           ),
         ),
       );
     }
 
-    // JIKA SUDAH SELESAI
     if (isCompleted) {
       return Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -220,19 +239,15 @@ class QuizDetailView extends StatelessWidget {
             ),
             child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
           ),
-          title: Text(
-            title,
-            style: const TextStyle(
-              color: Colors.green,
-              decoration: TextDecoration.lineThrough,
-            ),
-          ),
+          title: Text(title,
+              style: const TextStyle(
+                  color: Colors.green,
+                  decoration: TextDecoration.lineThrough)),
           trailing: const Icon(Icons.check_circle, color: Colors.green, size: 20),
         ),
       );
     }
 
-    // JIKA TERBUKA
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -255,21 +270,23 @@ class QuizDetailView extends StatelessWidget {
             color: const Color(0xFF73090D).withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.lock_open_outlined, color: Color(0xFF73090D), size: 24),
+          child: const Icon(Icons.lock_open_outlined,
+              color: Color(0xFF73090D), size: 24),
         ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.normal,
-          ),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        title: Text(title,
+            style: const TextStyle(
+                color: Colors.black87, fontWeight: FontWeight.normal)),
+        trailing:
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
       ),
     );
   }
 
   Widget _buildContinueButton(QuizDetailController controller) {
+    if (controller.isLoading.value) {
+      return const SizedBox.shrink();
+    }
+
     int? nextIndex;
     for (int i = 0; i < controller.chapters.length; i++) {
       final chapter = controller.chapters[i];
@@ -286,24 +303,19 @@ class QuizDetailView extends StatelessWidget {
         child: ElevatedButton(
           onPressed: () {
             Get.snackbar('Selamat!', 'Kamu sudah menyelesaikan semua materi!',
-                backgroundColor: Colors.green,
-                colorText: Colors.white);
+                backgroundColor: Colors.green, colorText: Colors.white);
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+                borderRadius: BorderRadius.circular(16)),
           ),
-          child: const Text(
-            '  SELESAI SEMUA ',
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.white),
-          ),
+          child: const Text('SELESAI SEMUA',
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white)),
         ),
       );
     }
@@ -317,19 +329,15 @@ class QuizDetailView extends StatelessWidget {
           onPressed: () => Get.toNamed('/login'),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF73090D),
-            foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+                borderRadius: BorderRadius.circular(16)),
           ),
-          child: const Text(
-            '🔒 LOGIN UNTUK LANJUTKAN',
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.white),
-          ),
+          child: const Text('🔒 LOGIN UNTUK LANJUTKAN',
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white)),
         ),
       );
     }
@@ -337,24 +345,18 @@ class QuizDetailView extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          controller.startQuiz(nextChapter['title'], nextIndex!);
-        },
+        onPressed: () => controller.startQuiz(nextChapter['title'], nextIndex!),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF73090D),
-          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+              borderRadius: BorderRadius.circular(16)),
         ),
-        child: const Text(
-          'LANJUTKAN BELAJAR',
-          style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Colors.white),
-        ),
+        child: const Text('LANJUTKAN BELAJAR',
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
       ),
     );
   }
@@ -362,26 +364,16 @@ class QuizDetailView extends StatelessWidget {
   void _showLoginDialog() {
     Get.dialog(
       AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text(
-          'Login Diperlukan',
-          style: TextStyle(
-            color: Color(0xFF73090D),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text(
-          'Silakan login untuk mengakses semua materi!',
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Login Diperlukan',
+            style: TextStyle(
+                color: Color(0xFF73090D), fontWeight: FontWeight.bold)),
+        content: const Text('Silakan login untuk mengakses semua materi!'),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text(
-              'Nanti Saja',
-              style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-            ),
+            child: const Text('Nanti Saja',
+                style: TextStyle(color: Colors.black)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -391,13 +383,10 @@ class QuizDetailView extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF73090D),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+                  borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text(
-              'Login Sekarang',
-              style: TextStyle(color: Colors.white),
-            ),
+            child: const Text('Login Sekarang',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -408,26 +397,16 @@ class QuizDetailView extends StatelessWidget {
   void _showMateriLockedDialog(int materiKe) {
     Get.dialog(
       AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text(
-          'Materi Terkunci',
-          style: TextStyle(
-            color: Color(0xFF73090D),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Selesaikan materi $materiKe terlebih dahulu!',
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Materi Terkunci',
+            style: TextStyle(
+                color: Color(0xFF73090D), fontWeight: FontWeight.bold)),
+        content: Text('Selesaikan materi $materiKe terlebih dahulu!'),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text(
-              'OK',
-              style: TextStyle(color: Color(0xFF73090D)),
-            ),
+            child: const Text('OK',
+                style: TextStyle(color: Color(0xFF73090D))),
           ),
         ],
       ),

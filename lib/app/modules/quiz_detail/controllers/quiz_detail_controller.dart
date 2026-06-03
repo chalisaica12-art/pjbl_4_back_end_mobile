@@ -8,7 +8,8 @@ class QuizDetailController extends GetxController {
 
   var progress = 0.0.obs;
   var currentScore = 0.obs;
-  var totalQuestions = 10.obs;
+  var totalQuestions = 0.obs;
+  var isLoading = true.obs;
   var isLoggedIn = false.obs;
   var chapters = <Map<String, dynamic>>[].obs;
 
@@ -23,24 +24,53 @@ class QuizDetailController extends GetxController {
     loadChapters(quizData);
   }
 
-  void loadChapters(Map<String, dynamic> quizData) {
-    chapters.value = [
-      {'title': 'Meganthropus Paleojavanicus', 'completed': false, 'locked': false},
-      {'title': 'Pithecanthropus Erectus', 'completed': false, 'locked': true},
-      {'title': 'Jenis-Jenis Manusia Cerdas', 'completed': false, 'locked': true},
-      {'title': 'Masa Berburu dan Meramu Tingkat Awal', 'completed': false, 'locked': true},
-      {'title': 'Masa Berburu Tingkat Lanjut', 'completed': false, 'locked': true},
-      {'title': 'Masa Bercocok Tanam', 'completed': false, 'locked': true},
-      {'title': 'Zaman Batu (Paleolitikum & Mesolitikum)', 'completed': false, 'locked': true},
-      {'title': 'Zaman Batu Muda (Neolitikum)', 'completed': false, 'locked': true},
-      {'title': 'Zaman Megalitikum (Batu Besar)', 'completed': false, 'locked': true},
-      {'title': 'Zaman Logam (Perundagian)', 'completed': false, 'locked': true},
-    ];
+  Future<void> loadChapters(Map<String, dynamic> quizData) async {
+    try {
+      isLoading.value = true;
+      final eraId = quizData['id']?.toString() ?? '';
 
-    if (userLoggedIn) {
-      _loadProgressFromDB(quizData['id']?.toString() ?? '');
+      // Fetch materi dari database
+      final response = await supabase
+          .from('materials')
+          .select('id, title, order_number')
+          .eq('era_id', eraId)
+          .order('order_number', ascending: true);
+
+      final List<dynamic> materiList = response as List<dynamic>;
+
+      chapters.value = materiList.map((m) => {
+        'id': m['id'],
+        'title': m['title'],
+        'order_number': m['order_number'],
+        'completed': false,
+        'locked': (m['order_number'] as int) > 1,
+      }).toList();
+
+      // Kalau belum ada data di database, fallback ke hardcode sementara
+      if (chapters.isEmpty) {
+        chapters.value = [
+          {'id': null, 'title': 'Meganthropus Paleojavanicus', 'order_number': 1, 'completed': false, 'locked': false},
+          {'id': null, 'title': 'Pithecanthropus Erectus', 'order_number': 2, 'completed': false, 'locked': true},
+          {'id': null, 'title': 'Jenis-Jenis Manusia Cerdas', 'order_number': 3, 'completed': false, 'locked': true},
+          {'id': null, 'title': 'Masa Berburu dan Meramu Tingkat Awal', 'order_number': 4, 'completed': false, 'locked': true},
+          {'id': null, 'title': 'Masa Berburu Tingkat Lanjut', 'order_number': 5, 'completed': false, 'locked': true},
+          {'id': null, 'title': 'Masa Bercocok Tanam', 'order_number': 6, 'completed': false, 'locked': true},
+          {'id': null, 'title': 'Zaman Batu (Paleolitikum & Mesolitikum)', 'order_number': 7, 'completed': false, 'locked': true},
+          {'id': null, 'title': 'Zaman Batu Muda (Neolitikum)', 'order_number': 8, 'completed': false, 'locked': true},
+          {'id': null, 'title': 'Zaman Megalitikum (Batu Besar)', 'order_number': 9, 'completed': false, 'locked': true},
+          {'id': null, 'title': 'Zaman Logam (Perundagian)', 'order_number': 10, 'completed': false, 'locked': true},
+        ];
+      }
+
+      if (userLoggedIn) {
+        await _loadProgressFromDB(eraId);
+      }
+      _updateProgress();
+    } catch (e) {
+      print('Load chapters error: $e');
+    } finally {
+      isLoading.value = false;
     }
-    _updateProgress();
   }
 
   Future<void> _loadProgressFromDB(String eraId) async {
@@ -66,7 +96,7 @@ class QuizDetailController extends GetxController {
       chapters.refresh();
       _updateProgress();
     } catch (e) {
-      print('Load progress error (ignored): $e');
+      print('Load progress error: $e');
     }
   }
 
@@ -77,21 +107,11 @@ class QuizDetailController extends GetxController {
     totalQuestions.value = chapters.length * 5;
   }
 
-  // ✅ DIPERBAIKI: Materi 2 terbuka untuk user login meskipun materi 1 belum selesai
   bool isChapterAccessible(int index) {
-    // Materi 1 selalu terbuka
     if (index == 0) return true;
-    
-    // Guest: hanya bisa materi 1
     if (!isLoggedIn.value) return false;
-    
-    // USER LOGIN:
-    // Materi 2 (index 1) selalu terbuka
     if (index == 1) return true;
-    
-    // Materi 3-10: harus selesaikan materi sebelumnya
     if (!chapters[index - 1]['completed']) return false;
-    
     return !chapters[index]['locked'];
   }
 
@@ -119,29 +139,30 @@ class QuizDetailController extends GetxController {
       }
       return;
     }
-    
+
+    final eraArgs = Get.arguments as Map<String, dynamic>;
     Get.toNamed('/splash-loading', arguments: {
-  'era_id': Get.arguments['id'],
-  'chapter': chapterTitle,
-  'chapter_index': chapterIndex,
-  'isGuest': !isLoggedIn.value,
-  'materi_id': chapterIndex + 1,  // ✅ Kirim materi_id
-});
+      'era_id': eraArgs['id'],
+      'era_title': eraArgs['title'],
+      'chapter': chapterTitle,
+      'chapter_index': chapterIndex,
+      'material_id': chapters[chapterIndex]['id'],
+      'isGuest': !isLoggedIn.value,
+    });
   }
 
   Future<void> completeChapter(int chapterIndex, String eraId) async {
     if (chapterIndex < chapters.length) {
       chapters[chapterIndex]['completed'] = true;
       chapters[chapterIndex]['locked'] = false;
-      
-      // Buka materi berikutnya
+
       if (chapterIndex + 1 < chapters.length) {
         chapters[chapterIndex + 1]['locked'] = false;
       }
-      
+
       chapters.refresh();
       _updateProgress();
-      
+
       if (userId != null && eraId.isNotEmpty) {
         try {
           await supabase.from('user_progress').upsert({
@@ -150,7 +171,7 @@ class QuizDetailController extends GetxController {
             'chapter_index': chapterIndex,
             'completed': true,
           });
-          
+
           await _checkEraCompletion();
         } catch (e) {
           print('Save progress error: $e');
@@ -167,12 +188,12 @@ class QuizDetailController extends GetxController {
     if (isAllChaptersCompleted) {
       Get.snackbar(
         'Selamat! 🎉',
-        'Kamu telah menyelesaikan semua materi Era 1!\nEra 2 sekarang terbuka.',
+        'Kamu telah menyelesaikan semua materi!\nEra berikutnya sekarang terbuka.',
         backgroundColor: Colors.green,
         colorText: Colors.white,
         duration: const Duration(seconds: 4),
       );
-      
+
       if (Get.isRegistered<HomeController>()) {
         await Get.find<HomeController>().fetchQuizzes();
       }

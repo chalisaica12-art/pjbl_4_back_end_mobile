@@ -5,14 +5,13 @@ import '../../../widgets/custom_bottom_navbar.dart';
 import '../../../data/models/avatar_model.dart';
 import '../../home/controllers/home_controller.dart';
 import '../../leaderboard/controllers/leaderboard_controller.dart';
-import '../../edit_profile/controllers/edit_profile_controller.dart'; // ✅ TAMBAHKAN
+import '../../edit_profile/controllers/edit_profile_controller.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Cek apakah guest
     final isGuest = controller.userId == null;
 
     if (isGuest) {
@@ -67,7 +66,6 @@ class ProfileView extends GetView<ProfileController> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // ✅ AVATAR DENGAN BORDER PUTIH + ICON PENSIL DI POJOK KANAN BAWAH
                       Obx(() => Stack(
                         alignment: Alignment.bottomRight,
                         children: [
@@ -109,7 +107,6 @@ class ProfileView extends GetView<ProfileController> {
                                         )),
                             ),
                           ),
-                          // ✅ ICON PENSIL DI POJOK KANAN BAWAH AVATAR
                           Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
@@ -150,7 +147,6 @@ class ProfileView extends GetView<ProfileController> {
                                       fontWeight: FontWeight.bold),
                                 )),
                             const SizedBox(height: 8),
-                            // ✅ BINTANG
                             Obx(() => Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 4),
@@ -297,10 +293,14 @@ class ProfileView extends GetView<ProfileController> {
                         title: "Notifikasi",
                         onTap: () {}),
                     const Divider(color: Colors.black12, height: 1),
+                    // ✅ GANTI: fetchProfile dulu sebelum buka toko avatar
                     _buildMenuItem(
                         icon: Icons.shopping_bag_outlined,
                         title: "Toko Avatar",
-                        onTap: () => _showAvatarShop()),
+                        onTap: () async {
+                          await controller.fetchProfile();
+                          _showAvatarShop();
+                        }),
                     const Divider(color: Colors.black12, height: 1),
                     _buildMenuItem(
                         icon: Icons.logout,
@@ -318,7 +318,6 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  // ✅ Tampilan saat belum login
   Widget _buildGuestView() {
     return Scaffold(
       backgroundColor: const Color(0xFFFDE7E4),

@@ -17,7 +17,7 @@ class ProfileController extends GetxController {
   var maxXP = 1000.obs;
   var levelTitle = "Pemula".obs;
   var userStars = 0.obs;
-  var activeAvatarId = Rx<int?>(null);  // ✅ BISA NULL
+  var activeAvatarId = Rx<int?>(null);
   var unlockedAvatarIds = <int>[].obs;
   var avatars = <AvatarModel>[].obs;
   var isLoading = true.obs;
@@ -45,11 +45,8 @@ class ProfileController extends GetxController {
       userLevel.value = response['level'] ?? 1;
       currentXP.value = response['xp'] ?? 0;
       userStars.value = response['stars'] ?? 0;
-      
-      // ✅ ACTIVE_AVATAR_ID BISA NULL
       activeAvatarId.value = response['active_avatar_id'] as int?;
-      
-      // ✅ UNLOCKED_AVATAR_IDS
+
       final unlockedList = response['unlocked_avatar_ids'];
       if (unlockedList != null) {
         unlockedAvatarIds.value = List<int>.from(unlockedList);
@@ -59,6 +56,9 @@ class ProfileController extends GetxController {
 
       maxXP.value = 1000 + (userLevel.value - 1) * 500;
       levelTitle.value = _getLevelTitle(userLevel.value);
+
+      // ✅ Refresh avatars setiap fetchProfile supaya data terbaru dari database
+      await _loadAvatars();
     } catch (e) {
       print('Error fetch profile: $e');
     } finally {
@@ -98,12 +98,9 @@ class ProfileController extends GetxController {
     return ((currentXP.value / maxXP.value) * 100).toInt();
   }
 
-  // ✅ GET AVATAR IMAGE (NULL/0 = TIDAK ADA AVATAR)
   String get activeAvatarImage {
     final avatarId = activeAvatarId.value;
-    if (avatarId == null || avatarId == 0) {
-      return ''; // KOSONG, TAMPIL INISIAL
-    }
+    if (avatarId == null || avatarId == 0) return '';
     final avatar = avatars.firstWhereOrNull((a) => a.id == avatarId);
     return avatar?.imagePath ?? '';
   }
@@ -145,17 +142,14 @@ class ProfileController extends GetxController {
       await supabase.from('profiles')
           .update({'active_avatar_id': avatarId}).eq('id', userId!);
 
-      // ✅ Sync ke HomeController
       if (Get.isRegistered<HomeController>()) {
         await Get.find<HomeController>().fetchUserProfile();
       }
-      
-      // ✅ Refresh leaderboard biar avatar langsung muncul
       if (Get.isRegistered<LeaderboardController>()) {
         Get.find<LeaderboardController>().fetchLeaderboard();
       }
 
-      Get.back(); // Tutup toko avatar
+      Get.back();
       Get.snackbar(
         "Sukses",
         "Avatar ${getAvatarName(avatarId)} aktif!",

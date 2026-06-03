@@ -16,63 +16,52 @@ class QuizController extends GetxController {
   var sudahKlikNext = false.obs;
   var isCorrect = false.obs;
   var correctAnswers = 0.obs;
+  var isLoading = true.obs;
 
-  // Soal-soal (Era Prakasa - Meganthropus Paleojavanicus)
-  final List<Map<String, dynamic>> questions = [
+  // Soal dari database
+  var questions = <Map<String, dynamic>>[].obs;
+
+  // Hardcode fallback soal materi 1 (kalau database belum ada)
+  final List<Map<String, dynamic>> _fallbackQuestions = [
     {
-      'question': 'Siapakah tokoh yang pertama kali menemukan fosil manusia purba Meganthropus Paleojavanicus?',
-      'image': null,
-      'options': [
-        'Eugene Dubois',
-        'G.H.R. von Koenigswald',
-        'Ter Haar',
-        'Raden Saleh',
-      ],
-      'answer': 'G.H.R. von Koenigswald',
+      'question_text': 'Siapakah tokoh yang pertama kali menemukan fosil manusia purba Meganthropus Paleojavanicus?',
+      'option_a': 'Eugene Dubois',
+      'option_b': 'G.H.R. von Koenigswald',
+      'option_c': 'Ter Haar',
+      'option_d': 'Raden Saleh',
+      'correct_answer': 'B',
     },
     {
-      'question': 'Di daerah manakah fosil rahang dan gigi Meganthropus Paleojavanicus pertama kali ditemukan?',
-      'image': null,
-      'options': [
-        'Trinil, Ngawi',
-        'Wajak, Tulungagung',
-        'Sangiran, Sragen',
-        'Ngandong, Blora',
-      ],
-      'answer': 'Sangiran, Sragen',
+      'question_text': 'Di daerah manakah fosil rahang dan gigi Meganthropus Paleojavanicus pertama kali ditemukan?',
+      'option_a': 'Trinil, Ngawi',
+      'option_b': 'Wajak, Tulungagung',
+      'option_c': 'Sangiran, Sragen',
+      'option_d': 'Ngandong, Blora',
+      'correct_answer': 'C',
     },
     {
-      'question': 'Secara harfiah atau etimologi, apa arti dari nama "Meganthropus Paleojavanicus"?',
-      'image': null,
-      'options': [
-        'Manusia kera dari Jawa yang berjalan tegak',
-        'Manusia raksasa tua dari Jawa',
-        'Manusia cerdas yang berasal dari Pulau Jawa',
-        'Manusia kera yang memiliki tubuh perkasa',
-      ],
-      'answer': 'Manusia raksasa tua dari Jawa',
+      'question_text': 'Secara harfiah, apa arti dari nama "Meganthropus Paleojavanicus"?',
+      'option_a': 'Manusia kera dari Jawa yang berjalan tegak',
+      'option_b': 'Manusia raksasa tua dari Jawa',
+      'option_c': 'Manusia cerdas yang berasal dari Pulau Jawa',
+      'option_d': 'Manusia kera yang memiliki tubuh perkasa',
+      'correct_answer': 'B',
     },
     {
-      'question': 'Berdasarkan struktur rahangnya yang sangat besar dan kuat serta tidak memiliki dagu, apa jenis makanan utama dari Meganthropus Paleojavanicus?',
-      'image': null,
-      'options': [
-        'Daging hewan buruan yang dibakar',
-        'Tumbuh-tumbuhan dan buah-buahan',
-        'Ikan dan kerang-kerangan sungai',
-        'Segala jenis makanan yang sudah dimasak',
-      ],
-      'answer': 'Tumbuh-tumbuhan dan buah-buahan',
+      'question_text': 'Berdasarkan struktur rahangnya, apa jenis makanan utama dari Meganthropus Paleojavanicus?',
+      'option_a': 'Daging hewan buruan',
+      'option_b': 'Ikan dan kerang-kerangan',
+      'option_c': 'Tumbuh-tumbuhan dan buah-buahan',
+      'option_d': 'Makanan yang sudah dimasak',
+      'correct_answer': 'C',
     },
     {
-      'question': 'Fosil Meganthropus Paleojavanicus ditemukan pada lapisan tanah Jetis. Lapisan ini juga sering disebut sebagai lapisan...',
-      'image': null,
-      'options': [
-        'Pleistosen Atas',
-        'Pleistosen Tengah',
-        'Pleistosen Bawah',
-        'Holosen',
-      ],
-      'answer': 'Pleistosen Bawah',
+      'question_text': 'Fosil Meganthropus Paleojavanicus ditemukan pada lapisan tanah Jetis, yang disebut sebagai lapisan...',
+      'option_a': 'Pleistosen Atas',
+      'option_b': 'Pleistosen Tengah',
+      'option_c': 'Holosen',
+      'option_d': 'Pleistosen Bawah',
+      'correct_answer': 'D',
     },
   ];
 
@@ -82,10 +71,77 @@ class QuizController extends GetxController {
   String? get currentUserId => supabase.auth.currentUser?.id;
   bool get isGuest => currentUserId == null;
 
+  // Argument dari splash loading
+  late String eraId;
+  late String eraTitle;
+  late String chapterTitle;
+  late int chapterIndex;
+  String? materialId;
+
   @override
   void onInit() {
     super.onInit();
-    _startTimer();
+    final args = Get.arguments as Map<String, dynamic>? ?? {};
+    eraId = args['era_id']?.toString() ?? '';
+    eraTitle = args['era_title']?.toString() ?? '';
+    chapterTitle = args['chapter']?.toString() ?? '';
+    chapterIndex = args['chapter_index'] ?? 0;
+    materialId = args['material_id']?.toString();
+
+    fetchQuestions();
+  }
+
+  Future<void> fetchQuestions() async {
+    try {
+      isLoading.value = true;
+
+      if (materialId != null && materialId!.isNotEmpty) {
+        // Fetch dari database berdasarkan material_id
+        final response = await supabase
+            .from('questions')
+            .select()
+            .eq('material_id', materialId!)
+            .order('order_number', ascending: true);
+
+        final List<dynamic> data = response as List<dynamic>;
+        if (data.isNotEmpty) {
+          questions.value = List<Map<String, dynamic>>.from(data);
+        } else {
+          // Database kosong, pakai fallback
+          questions.value = _fallbackQuestions;
+        }
+      } else {
+        // Tidak ada material_id, pakai fallback
+        questions.value = _fallbackQuestions;
+      }
+    } catch (e) {
+      print('Fetch questions error: $e');
+      questions.value = _fallbackQuestions;
+    } finally {
+      isLoading.value = false;
+      _startTimer();
+    }
+  }
+
+  // Helper ambil jawaban dari format database (A/B/C/D)
+  String getCorrectAnswerText(Map<String, dynamic> q) {
+    final answer = q['correct_answer']?.toString().toUpperCase() ?? '';
+    switch (answer) {
+      case 'A': return q['option_a'] ?? '';
+      case 'B': return q['option_b'] ?? '';
+      case 'C': return q['option_c'] ?? '';
+      case 'D': return q['option_d'] ?? '';
+      default: return answer;
+    }
+  }
+
+  List<String> getOptions(Map<String, dynamic> q) {
+    return [
+      q['option_a'] ?? '',
+      q['option_b'] ?? '',
+      q['option_c'] ?? '',
+      q['option_d'] ?? '',
+    ];
   }
 
   void _startTimer() {
@@ -108,7 +164,6 @@ class QuizController extends GetxController {
     }
   }
 
-  // ✅ Hitung stars berdasarkan skor
   int _hitungStars(int correct, int total) {
     final persen = (correct / total) * 100;
     if (persen >= 80) return 3;
@@ -117,16 +172,14 @@ class QuizController extends GetxController {
     return 0;
   }
 
-  // ✅ Simpan score ke Supabase (hanya kalau sudah login)
   Future<void> _simpanScore() async {
-    if (isGuest) return; // guest tidak disimpan
+    if (isGuest) return;
 
     try {
       final score = (correctAnswers.value * 100 ~/ totalQuestions);
       final stars = _hitungStars(correctAnswers.value, totalQuestions);
-      final xpDapat = correctAnswers.value * 20; // 20 XP per jawaban benar
+      final xpDapat = correctAnswers.value * 20;
 
-      // Simpan ke tabel quiz_scores
       await supabase.from('quiz_scores').insert({
         'user_id': currentUserId,
         'score': score,
@@ -137,7 +190,6 @@ class QuizController extends GetxController {
         'played_at': DateTime.now().toIso8601String(),
       });
 
-      // Update stars dan XP di tabel profiles
       final profileResponse = await supabase
           .from('profiles')
           .select('stars, xp, level')
@@ -151,7 +203,6 @@ class QuizController extends GetxController {
       final newStars = currentStars + stars;
       final newXP = currentXP + xpDapat;
 
-      // Hitung level up
       int maxXP = 1000 + ((currentLevel as int) - 1) * 500;
       int finalXP = newXP;
       int finalLevel = currentLevel;
@@ -166,8 +217,6 @@ class QuizController extends GetxController {
         'xp': finalXP,
         'level': finalLevel,
       }).eq('id', currentUserId!);
-
-      print('Score tersimpan: score=$score, stars=$stars, xp=$xpDapat');
     } catch (e) {
       print('Error simpan score: $e');
     }
@@ -177,7 +226,8 @@ class QuizController extends GetxController {
     if (selectedAnswer.value.isEmpty) return;
 
     sudahKlikNext.value = true;
-    isCorrect.value = (selectedAnswer.value == currentQuestionData['answer']);
+    final correctText = getCorrectAnswerText(currentQuestionData);
+    isCorrect.value = (selectedAnswer.value == correctText);
     if (isCorrect.value) correctAnswers.value++;
 
     Future.delayed(const Duration(seconds: 2), () async {
@@ -188,16 +238,18 @@ class QuizController extends GetxController {
         isCorrect.value = false;
       } else {
         _timer?.cancel();
-
-        // ✅ Simpan score dulu sebelum navigasi
         await _simpanScore();
 
         Get.toNamed('/score', arguments: {
+          'era_id': eraId,
+          'era_title': eraTitle,
+          'chapter': chapterTitle,
+          'chapter_index': chapterIndex,
           'totalMinutes': minutes.value,
           'totalSeconds': seconds.value,
           'correctAnswers': correctAnswers.value,
           'totalQuestions': totalQuestions,
-          'isGuest': isGuest, // ✅ kirim info guest ke score view
+          'isGuest': isGuest,
         });
       }
     });

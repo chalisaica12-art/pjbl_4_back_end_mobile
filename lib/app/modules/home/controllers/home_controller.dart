@@ -14,6 +14,9 @@ class HomeController extends GetxController {
   final userAvatar = ''.obs;
   final userStars = 0.obs;
 
+  // ✅ Map era_id -> true/false (apakah semua materi di era itu selesai)
+  final eraCompletionMap = <String, bool>{}.obs;
+
   final pageController = PageController();
 
   final bannerImages = [
@@ -64,7 +67,6 @@ class HomeController extends GetxController {
       }
 
       userAvatar.value = profileCtrl.activeAvatarImage;
-
       ever(profileCtrl.activeAvatarId, (_) {
         userAvatar.value = profileCtrl.activeAvatarImage;
       });
@@ -73,9 +75,52 @@ class HomeController extends GetxController {
     }
   }
 
+  // ✅ Cek apakah semua materi di tiap era sudah selesai
+  Future<void> _fetchEraCompletion(List<Map<String, dynamic>> eras) async {
+    if (currentUserId == null) return;
+
+    try {
+      final newMap = <String, bool>{};
+
+      for (final era in eras) {
+        final eraId = era['id']?.toString() ?? '';
+        if (eraId.isEmpty) continue;
+
+        // Hitung total materi di era ini
+        final materiResponse = await supabase
+            .from('materials')
+            .select('id')
+            .eq('era_id', eraId);
+        final totalMateri = (materiResponse as List).length;
+
+        if (totalMateri == 0) {
+          newMap[eraId] = false;
+          continue;
+        }
+
+        // Hitung materi yang sudah selesai user di era ini
+        final progressResponse = await supabase
+            .from('user_progress')
+            .select('chapter_index')
+            .eq('user_id', currentUserId!)
+            .eq('era_id', eraId)
+            .eq('completed', true);
+        final completedCount = (progressResponse as List).length;
+
+        newMap[eraId] = completedCount >= totalMateri;
+        print('Era $eraId: $completedCount/$totalMateri selesai');
+      }
+
+      eraCompletionMap.value = newMap;
+    } catch (e) {
+      print('Error fetching era completion: $e');
+    }
+  }
+
   Future<void> fetchQuizzes() async {
     try {
       isLoading.value = true;
+
       final response = await supabase
           .from('quizzes')
           .select()
@@ -91,10 +136,8 @@ class HomeController extends GetxController {
 
       quizList.value = filteredQuizzes;
 
-      for (var quiz in filteredQuizzes) {
-        print('=== Era ${quiz['order_number']} ===');
-        print('image value: "${quiz['image']}"');
-      }
+      // ✅ Setelah dapat data era, fetch completion status
+      await _fetchEraCompletion(filteredQuizzes);
     } catch (e) {
       print('Error fetching quizzes: $e');
     } finally {
@@ -102,17 +145,27 @@ class HomeController extends GetxController {
     }
   }
 
+  // ✅ Era 1 selalu unlock
+  // Era N unlock kalau semua materi di era N-1 sudah selesai
   bool isUnlocked(int orderNumber) {
     if (orderNumber == 1) return true;
     if (isGuest) return false;
-    return false;
+
+    // Cari era sebelumnya
+    final prevEra = quizList.firstWhereOrNull(
+      (q) => (q['order_number'] as int? ?? 0) == orderNumber - 1,
+    );
+    if (prevEra == null) return false;
+
+    final prevEraId = prevEra['id']?.toString() ?? '';
+    return eraCompletionMap[prevEraId] == true;
   }
 
   void onQuizTap(Map<String, dynamic> quiz) {
     final orderNum = quiz['order_number'] as int? ?? 1;
     final isLocked = !isUnlocked(orderNum);
 
-    if (isLocked && orderNum > 1 && isGuest) {
+    if (isLocked && isGuest) {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -144,7 +197,7 @@ class HomeController extends GetxController {
             'Era Terkunci',
             style: TextStyle(color: Color(0xFF73090D), fontWeight: FontWeight.bold),
           ),
-          content: const Text('Selesaikan era sebelumnya terlebih dahulu!'),
+          content: const Text('Selesaikan semua materi era sebelumnya terlebih dahulu!'),
           actions: [
             TextButton(
               onPressed: () => Get.back(),
