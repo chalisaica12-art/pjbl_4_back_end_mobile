@@ -72,7 +72,7 @@ class LoginController extends GetxController {
         // Ganti URL ini dengan URL Netlify kamu setelah upload nanti
         // Contoh: 'https://sejarah-admin.netlify.app'
         // Untuk sekarang (testing lokal), pakai file lokal dulu
-        final url = Uri.parse('https://GANTI_DENGAN_URL_NETLIFY_KAMU');
+        final url = Uri.parse('https://startling-praline-679a22.netlify.app');
         if (await canLaunchUrl(url)) {
           await launchUrl(url, mode: LaunchMode.externalApplication);
         }

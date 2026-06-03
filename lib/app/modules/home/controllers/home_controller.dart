@@ -7,8 +7,6 @@ class HomeController extends GetxController {
   final supabase = Supabase.instance.client;
 
   final quizList = <Map<String, dynamic>>[].obs;
-  final likedItems = <String, bool>{}.obs;
-  final likeCounts = <String, int>{}.obs;
   final isLoading = true.obs;
   final currentBannerPage = 0.obs;
   final selectedIndex = 0.obs;
@@ -81,14 +79,14 @@ class HomeController extends GetxController {
       final response = await supabase
           .from('quizzes')
           .select()
-          .eq('category', 'journey')
           .order('order_number', ascending: true);
 
       final rawQuizzes = List<Map<String, dynamic>>.from(response);
 
+      // Tampilkan 3 era pertama
       final filteredQuizzes = rawQuizzes.where((quiz) {
         final orderNum = quiz['order_number'] as int? ?? 0;
-        return orderNum == 1 || orderNum == 2 || orderNum == 3;
+        return orderNum >= 1 && orderNum <= 3;
       }).toList();
 
       quizList.value = filteredQuizzes;
@@ -96,87 +94,11 @@ class HomeController extends GetxController {
       for (var quiz in filteredQuizzes) {
         print('=== Era ${quiz['order_number']} ===');
         print('image value: "${quiz['image']}"');
-        print('image type: ${quiz['image'].runtimeType}');
-      }
-
-      for (var quiz in quizList) {
-        likeCounts[quiz['id'].toString()] = (quiz['rating'] as num).toInt();
-      }
-
-      if (currentUserId != null) {
-        final likes = await supabase
-            .from('quiz_likes')
-            .select('quiz_id')
-            .eq('user_id', currentUserId!);
-        for (var like in likes) {
-          likedItems[like['quiz_id']] = true;
-        }
       }
     } catch (e) {
       print('Error fetching quizzes: $e');
     } finally {
       isLoading.value = false;
-    }
-  }
-
-  Future<void> toggleLike(String quizId) async {
-    if (currentUserId == null) {
-      Get.dialog(
-        AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Login Required'),
-          content: const Text('Please login to like this quiz'),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child:
-                  const Text('Cancel', style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () {
-                Get.back();
-                Get.toNamed('/login');
-              },
-              child: const Text('Login',
-                  style: TextStyle(color: Color(0xFF73090D))),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    try {
-      final isLiked = likedItems[quizId] ?? false;
-      final currentCount = likeCounts[quizId] ?? 0;
-
-      if (isLiked) {
-        await supabase
-            .from('quiz_likes')
-            .delete()
-            .eq('quiz_id', quizId)
-            .eq('user_id', currentUserId!);
-        likedItems[quizId] = false;
-        likeCounts[quizId] = currentCount - 1;
-        await supabase
-            .from('quizzes')
-            .update({'rating': currentCount - 1}).eq('id', quizId);
-      } else {
-        await supabase.from('quiz_likes').insert({
-          'quiz_id': quizId,
-          'user_id': currentUserId!,
-        });
-        likedItems[quizId] = true;
-        likeCounts[quizId] = currentCount + 1;
-        await supabase
-            .from('quizzes')
-            .update({'rating': currentCount + 1}).eq('id', quizId);
-      }
-      likedItems.refresh();
-      likeCounts.refresh();
-    } catch (e) {
-      print('Error toggle like: $e');
     }
   }
 
@@ -193,24 +115,20 @@ class HomeController extends GetxController {
     if (isLocked && orderNum > 1 && isGuest) {
       Get.dialog(
         AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Login Diperlukan'),
-          content: const Text(
-              'Kamu harus login untuk memainkan era ini dan menyimpan skor!'),
+          content: const Text('Kamu harus login untuk memainkan era ini dan menyimpan skor!'),
           actions: [
             TextButton(
               onPressed: () => Get.back(),
-              child:
-                  const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () {
                 Get.back();
                 Get.toNamed('/login');
               },
-              child: const Text('Login',
-                  style: TextStyle(color: Color(0xFF73090D))),
+              child: const Text('Login', style: TextStyle(color: Color(0xFF73090D))),
             ),
           ],
         ),
@@ -218,30 +136,19 @@ class HomeController extends GetxController {
       return;
     }
 
-    // ✅ DIALOG UNTUK ERA TERKUNCI (bukan snackbar)
     if (isLocked) {
       Get.dialog(
         AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text(
             'Era Terkunci',
-            style: TextStyle(
-              color: Color(0xFF73090D),
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Color(0xFF73090D), fontWeight: FontWeight.bold),
           ),
-          content: const Text(
-            'Selesaikan era sebelumnya terlebih dahulu!',
-          ),
+          content: const Text('Selesaikan era sebelumnya terlebih dahulu!'),
           actions: [
             TextButton(
               onPressed: () => Get.back(),
-              child: const Text(
-                'OK',
-                style: TextStyle(color: Color(0xFF73090D)),
-              ),
+              child: const Text('OK', style: TextStyle(color: Color(0xFF73090D))),
             ),
           ],
         ),
@@ -265,23 +172,20 @@ class HomeController extends GetxController {
         if (isGuest) {
           Get.dialog(
             AlertDialog(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               title: const Text('Login Diperlukan'),
               content: const Text('Kamu harus login untuk melihat profil!'),
               actions: [
                 TextButton(
                   onPressed: () => Get.back(),
-                  child: const Text('Batal',
-                      style: TextStyle(color: Colors.grey)),
+                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
                 ),
                 TextButton(
                   onPressed: () {
                     Get.back();
                     Get.toNamed('/login');
                   },
-                  child: const Text('Login',
-                      style: TextStyle(color: Color(0xFF73090D))),
+                  child: const Text('Login', style: TextStyle(color: Color(0xFF73090D))),
                 ),
               ],
             ),
